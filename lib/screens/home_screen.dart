@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../desktop/desktop.dart';
 import '../store.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/idle_watcher.dart';
@@ -46,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return IdleWatcher(child: _layout(context));
+    return IdleWatcher(child: TrayShell(child: _layout(context)));
   }
 
   Widget _layout(BuildContext context) {

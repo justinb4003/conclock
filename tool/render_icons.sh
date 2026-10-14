@@ -24,4 +24,6 @@ for name in conclock conclock-full conclock-foreground; do
     "file://$TMP/$name.html" 2>/dev/null
 done
 convert "$DIR/conclock.png" -resize 256x256 "$DIR/conclock-256.png"
+convert "$DIR/conclock.png" -resize 64x64 "$DIR/tray.png"
+convert "$DIR/conclock.png" -define icon:auto-resize=48,32,24,16 "$DIR/tray.ico"
 ls -l "$DIR"

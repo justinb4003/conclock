@@ -1,11 +1,13 @@
 import 'dart:ui' show AppExitResponse;
 import 'package:flutter/material.dart';
 
+import 'desktop/desktop.dart';
 import 'screens/home_screen.dart';
 import 'store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initDesktopWindow();
   final store = AppStore();
   await store.load();
   runApp(ConClockApp(store: store));

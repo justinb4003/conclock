@@ -34,7 +34,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev lld
+            libgtk-3-dev liblzma-dev lld \
+            libayatana-appindicator3-dev
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -63,7 +64,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev lld
+            libgtk-3-dev liblzma-dev lld \
+            libayatana-appindicator3-dev
       # flutter-action only ships x64 Linux SDKs; the git checkout fetches
       # arm64 tooling for itself.
       - name: Install Flutter

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../backup/backup.dart';
+import '../desktop/desktop.dart';
 import '../models.dart';
 import '../store.dart';
 import '../widgets/data_location.dart';
@@ -51,30 +52,39 @@ class ClientsScreen extends StatelessWidget {
             onSelected: (v) => switch (v) {
               'export' => exportBackup(context),
               'import' => importBackup(context),
+              'tray' => store.setCloseToTray(!store.closeToTray),
               _ => showDataLocation(context),
             },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
+            itemBuilder: (context) => [
+              const PopupMenuItem(
                 value: 'export',
                 child: ListTile(
                   leading: Icon(Icons.upload_file),
                   title: Text('Export backup…'),
                 ),
               ),
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: 'import',
                 child: ListTile(
                   leading: Icon(Icons.restore),
                   title: Text('Import backup…'),
                 ),
               ),
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: 'location',
                 child: ListTile(
                   leading: Icon(Icons.info_outline),
                   title: Text('Data location'),
                 ),
               ),
+              if (hasTray) ...[
+                const PopupMenuDivider(),
+                CheckedPopupMenuItem(
+                  value: 'tray',
+                  checked: store.closeToTray,
+                  child: const Text('Keep running in tray when closed'),
+                ),
+              ],
             ],
           ),
         ],

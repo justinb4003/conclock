@@ -12,6 +12,11 @@ one JSON file.
   rounding up to ½ h, per task or per client-day.
 - **Clients** — add, rename, recolor, drag to reorder, archive, delete.
 
+Desktop: closing the window keeps ConClock running in the system tray (menu
+bar on macOS); the tray menu shows what's running and can stop, switch
+clients, reopen or quit. Turn it off under Clients → 💾 → "Keep running in
+tray when closed". Launching it again brings back the existing window.
+
 🔍 on Track: type to find a client or task and start it. Right-click
 (long-press) a task to rename or merge it. Timers left
 running 9h+, or through a computer sleep, prompt "still working?".
@@ -33,7 +38,8 @@ Stopping or switching away from an entry with no note asks for a task name
 ## Build
 
 ```sh
-flutter run -d linux        # needs: clang cmake ninja-build libgtk-3-dev
+flutter run -d linux        # needs: clang cmake ninja-build lld libgtk-3-dev
+                            #        libayatana-appindicator3-dev
 flutter run -d chrome
 flutter build web
 flutter test

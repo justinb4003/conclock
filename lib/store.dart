@@ -33,6 +33,9 @@ class AppStore extends ChangeNotifier {
   /// Timesheet rounding (up to the next half hour).
   Rounding rounding = Rounding.off;
 
+  /// Desktop: closing the window hides it to the tray instead of quitting.
+  bool closeToTray = true;
+
   Timer? _saveTimer;
   bool _dirty = false;
   Future<void> _writing = Future.value();
@@ -137,6 +140,7 @@ class AppStore extends ChangeNotifier {
     decimalHours = settings['decimalHours'] as bool? ?? false;
     rounding =
         Rounding.values.asNameMap()[settings['rounding']] ?? Rounding.off;
+    closeToTray = settings['closeToTray'] as bool? ?? true;
   }
 
   // ------------------------------------------------------------- backups
@@ -160,7 +164,11 @@ class AppStore extends ChangeNotifier {
 
   Map<String, dynamic> toJson() => {
     'version': 1,
-    'settings': {'decimalHours': decimalHours, 'rounding': rounding.name},
+    'settings': {
+      'decimalHours': decimalHours,
+      'rounding': rounding.name,
+      'closeToTray': closeToTray,
+    },
     'clients': [for (final c in clients) c.toJson()],
     'entries': [for (final e in entries) e.toJson()],
   };
@@ -302,6 +310,12 @@ class AppStore extends ChangeNotifier {
   void setDecimalHours(bool v) {
     if (decimalHours == v) return;
     decimalHours = v;
+    _changed();
+  }
+
+  void setCloseToTray(bool v) {
+    if (closeToTray == v) return;
+    closeToTray = v;
     _changed();
   }
 

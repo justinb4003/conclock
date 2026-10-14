@@ -51,7 +51,7 @@ Package: conclock
 Version: $VERSION
 Architecture: $ARCH
 Maintainer: Justin Buist <justin.buist@gmail.com>
-Depends: libgtk-3-0 | libgtk-3-0t64, libc6
+Depends: libgtk-3-0 | libgtk-3-0t64, libayatana-appindicator3-1, libc6
 Section: utils
 Priority: optional
 Installed-Size: $(du -sk "$ROOT/opt" | cut -f1)
