@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
 # Package a Linux release bundle as a .deb.
-#   tool/package_deb.sh [version] [out_dir]
-# Run after `flutter build linux --release`. Version defaults to pubspec's.
+#   tool/package_deb.sh [version] [out_dir] [arch]
+# Run after `flutter build linux --release`. Version defaults to pubspec's,
+# arch (amd64 or arm64) to this machine's.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 VERSION="${1:-$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)}"
 OUT="${2:-build/deb}"
-ARCH=amd64
+ARCH="${3:-$(dpkg --print-architecture)}"
+case "$ARCH" in
+  amd64) FLUTTER_ARCH=x64 ;;
+  arm64) FLUTTER_ARCH=arm64 ;;
+  *) echo "Unsupported arch: $ARCH" >&2; exit 1 ;;
+esac
 APP_ID=com.conclock.conclock
-BUNDLE=build/linux/x64/release/bundle
+BUNDLE=build/linux/$FLUTTER_ARCH/release/bundle
 [ -x "$BUNDLE/conclock" ] || { echo "No release bundle; run flutter build linux --release" >&2; exit 1; }
 
 ROOT="$(mktemp -d)"

@@ -54,6 +54,81 @@ jobs:
           name: conclock-linux-x64
           path: dist/*
 
+  linux-arm64:
+    needs: test
+    runs-on: ubuntu-22.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev lld
+      # flutter-action only ships x64 Linux SDKs; the git checkout fetches
+      # arm64 tooling for itself.
+      - name: Install Flutter
+        run: |
+          git clone --depth 1 --branch "$FLUTTER_VERSION" \
+            https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - run: flutter --version
+      - run: flutter build linux --release
+      - name: Package tarball and .deb
+        run: |
+          VERSION=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
+          mkdir -p dist
+          tar -C build/linux/arm64/release/bundle -czf \
+            dist/conclock-${VERSION}-linux-arm64.tar.gz .
+          tool/package_deb.sh "$VERSION" dist arm64
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conclock-linux-arm64
+          path: dist/*
+
+  android:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Release signing key
+        # Secrets aren't available to pull requests from forks; those
+        # builds fall back to the debug key.
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "No key; debug-signed"; exit 0; fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          cat > android/key.properties <<EOF
+          storeFile=$RUNNER_TEMP/release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEYSTORE_PASSWORD
+          EOF
+      - run: flutter build apk --release
+      - name: Package APK
+        run: |
+          VERSION=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            dist/conclock-${VERSION}-android.apk
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conclock-android
+          path: dist/*
+
   windows:
     needs: test
     runs-on: windows-latest
@@ -147,7 +222,7 @@ jobs:
   release:
     # Push a tag like v1.0.0 to publish a GitHub release with the binaries.
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows, macos]
+    needs: [linux, linux-arm64, windows, macos, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write

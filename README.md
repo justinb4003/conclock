@@ -43,8 +43,8 @@ python3 tool/seed_test_data.py   # 4 weeks of 9-5 test data (--remove to undo)
 ## Releases
 
 GitHub Actions (`.github/workflows/build.yml`) tests and builds on every push:
-Linux x64 (`.tar.gz` and `.deb`), Windows x64 (`.zip`) and macOS universal
-(`.dmg`) as workflow artifacts. Pushes to `main` also deploy the web app to GitHub Pages:
+Linux x64 and arm64 (`.tar.gz` and `.deb`), Windows x64 (`.zip`), macOS
+universal (`.dmg`) and Android (`.apk`) as workflow artifacts. Pushes to `main` also deploy the web app to GitHub Pages:
 https://justinb4003.github.io/conclock/ (data stays in your browser; open
 tabs stay in sync). Push a `v*` tag (e.g. `git tag v0.2.0 && git push --tags`) to
 publish them as a GitHub release.
@@ -58,3 +58,9 @@ The macOS build is ad-hoc signed but not notarized (that needs a paid Apple
 Developer account), so the first launch is blocked: drag ConClock to
 Applications, try to open it, then allow it under System Settings → Privacy &
 Security → "Open Anyway". Or: `xattr -dr com.apple.quarantine /Applications/ConClock.app`.
+
+Android: install the `.apk` (allow installs from your browser/files app when
+asked). It's signed with a release key held in the repo's Actions secrets
+(`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`),
+so new versions install over old ones. Keep a backup of that key: without it,
+future builds can't update existing installs.
