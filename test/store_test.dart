@@ -17,8 +17,10 @@ class MemoryStorage extends DataStorage {
   @override
   Future<void> write(String d) async => data = d;
 
+  final copies = <String, String?>{};
+
   @override
-  Future<void> backupCorrupt() async {}
+  Future<void> keepCopy(String tag, String? data) async => copies[tag] = data;
 
   void Function(String)? onChange;
 
@@ -169,10 +171,45 @@ void main() {
     expect(store.clients.single.name, 'From other tab');
   });
 
+  test('export then import round-trips and keeps a pre-import copy', () async {
+    final a = store.addClient('Acme');
+    store.toggle(a.id, note: 'Design');
+    t = t.add(const Duration(hours: 2));
+    store.stop();
+    store.setRounding(Rounding.task);
+    final backup = store.exportJson();
+
+    final otherStorage = MemoryStorage();
+    final target = AppStore(storage: otherStorage)..addClient('Doomed');
+    await target.importJson(backup);
+
+    expect(target.clients.single.name, 'Acme');
+    expect(target.entries.single.note, 'Design');
+    expect(target.rounding, Rounding.task);
+    expect(otherStorage.copies['pre-import'], contains('Doomed'));
+    await target.flush();
+    expect(otherStorage.data, contains('Design'));
+  });
+
+  test('importing a bad file changes nothing', () async {
+    store.addClient('Keep me');
+    for (final bad in [
+      'not json',
+      '[]',
+      '{"entries": []}',
+      '{"clients": [{"id": 1}]}',
+    ]) {
+      await expectLater(store.importJson(bad), throwsA(anything));
+      expect(store.clients.single.name, 'Keep me');
+    }
+    expect(storage.copies, isEmpty);
+  });
+
   test('corrupt data does not crash load', () async {
     storage.data = '{not json';
     await store.load();
     expect(store.loadError, isNotNull);
+    expect(storage.copies.containsKey('corrupt'), isTrue);
     expect(store.clients, isEmpty);
   });
 }

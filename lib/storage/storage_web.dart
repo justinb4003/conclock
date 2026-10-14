@@ -33,8 +33,8 @@ class _LocalStorage extends DataStorage {
   }
 
   @override
-  Future<void> backupCorrupt() async {
-    final v = web.window.localStorage.getItem(_key);
-    if (v != null) web.window.localStorage.setItem('$_key.corrupt', v);
+  Future<void> keepCopy(String tag, String? data) async {
+    final v = data ?? web.window.localStorage.getItem(_key);
+    if (v != null) web.window.localStorage.setItem('$_key.$tag', v);
   }
 }

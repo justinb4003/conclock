@@ -125,6 +125,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          pattern: conclock-*  # not the Pages bundle
           path: dist
           merge-multiple: true
       - uses: softprops/action-gh-release@v2

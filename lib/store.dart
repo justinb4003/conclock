@@ -60,7 +60,7 @@ class AppStore extends ChangeNotifier {
           'Saved data could not be read, so a backup copy was kept '
           'and ConClock started fresh. ($e)';
       try {
-        await _storage.backupCorrupt();
+        await _storage.keepCopy('corrupt', null);
       } catch (_) {}
     }
     // Another browser tab saved: adopt its data so we don't overwrite it.
@@ -75,25 +75,51 @@ class AppStore extends ChangeNotifier {
     });
   }
 
+  /// Replaces all state with [raw]. Parses everything first, so on a bad
+  /// document it throws and leaves the current state untouched.
   void _apply(String raw) {
-    final data = jsonDecode(raw) as Map<String, dynamic>;
+    final data = jsonDecode(raw);
+    if (data is! Map<String, dynamic> || data['clients'] is! List) {
+      throw const FormatException('Not a ConClock data file');
+    }
+    final newClients = [
+      for (final c in data['clients'] as List)
+        Client.fromJson(c as Map<String, dynamic>),
+    ];
+    final newEntries = [
+      for (final e in data['entries'] as List? ?? const [])
+        Entry.fromJson(e as Map<String, dynamic>),
+    ];
+    final settings = data['settings'] as Map<String, dynamic>? ?? const {};
     clients
       ..clear()
-      ..addAll([
-        for (final c in data['clients'] as List? ?? const [])
-          Client.fromJson(c as Map<String, dynamic>),
-      ]);
+      ..addAll(newClients);
     entries
       ..clear()
-      ..addAll([
-        for (final e in data['entries'] as List? ?? const [])
-          Entry.fromJson(e as Map<String, dynamic>),
-      ]);
+      ..addAll(newEntries);
     _sort();
-    final settings = data['settings'] as Map<String, dynamic>? ?? const {};
     decimalHours = settings['decimalHours'] as bool? ?? false;
     rounding =
         Rounding.values.asNameMap()[settings['rounding']] ?? Rounding.off;
+  }
+
+  // ------------------------------------------------------------- backups
+
+  /// Everything, as a pretty-printed JSON backup.
+  String exportJson() => const JsonEncoder.withIndent('  ').convert(toJson());
+
+  /// Replaces all data with a backup. The current data is kept as a copy
+  /// first. Throws [FormatException] (changing nothing) if [raw] isn't a
+  /// ConClock backup.
+  Future<void> importJson(String raw) async {
+    final previous = jsonEncode(toJson());
+    _apply(raw); // throws before changing anything if raw is bad
+    _changed();
+    try {
+      await _storage.keepCopy('pre-import', previous);
+    } catch (e) {
+      debugPrint('ConClock: could not keep pre-import copy: $e');
+    }
   }
 
   Map<String, dynamic> toJson() => {

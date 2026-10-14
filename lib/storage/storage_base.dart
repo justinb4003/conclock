@@ -7,8 +7,9 @@ abstract class DataStorage {
 
   Future<void> write(String data);
 
-  /// Keep a copy of unreadable data before it gets overwritten.
-  Future<void> backupCorrupt();
+  /// Keeps a side copy tagged [tag] of [data], or of what's currently
+  /// stored when null (e.g. unreadable data before it gets overwritten).
+  Future<void> keepCopy(String tag, String? data);
 
   /// Calls [onChange] when another instance (e.g. a second browser tab)
   /// saves. No-op where that can't happen.

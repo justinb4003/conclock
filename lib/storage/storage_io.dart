@@ -38,12 +38,15 @@ class _FileStorage extends DataStorage {
   }
 
   @override
-  Future<void> backupCorrupt() async {
+  Future<void> keepCopy(String tag, String? data) async {
     final f = await _getFile();
-    if (await f.exists()) {
-      await f.copy(
-        '${f.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}',
-      );
+    final copy = File(
+      '${f.path}.$tag-${DateTime.now().millisecondsSinceEpoch}',
+    );
+    if (data != null) {
+      await copy.writeAsString(data, flush: true);
+    } else if (await f.exists()) {
+      await f.copy(copy.path);
     }
   }
 }
