@@ -98,7 +98,21 @@ class _IndexedDbStorage extends DataStorage {
     final v = data ?? await _get(_key);
     if (v == null) return;
     // Timestamped like the desktop's files, so copies don't overwrite each
-    // other.
+    // other; only the newest few are kept, since each is a full copy.
     await _put('$_key.$tag-${DateTime.now().millisecondsSinceEpoch}', v);
+    await _prune('$_key.$tag-');
+  }
+
+  /// Deletes all but the newest [keepCopies] keys starting with [prefix].
+  Future<void> _prune(String prefix) async {
+    final db = await _open();
+    final store = db.transaction(_store.toJS, 'readwrite').objectStore(_store);
+    final keys = ((await _done(store.getAllKeys())) as JSArray<JSAny?>).toDart
+        .map((k) => k.isA<JSString>() ? (k as JSString).toDart : '')
+        .where((k) => k.startsWith(prefix))
+        .toList();
+    for (final k in oldCopies(keys)) {
+      store.delete(k.toJS);
+    }
   }
 }

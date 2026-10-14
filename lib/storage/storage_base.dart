@@ -1,3 +1,13 @@
+/// Side copies kept per tag (see [DataStorage.keepCopy]).
+const keepCopies = 3;
+
+/// Of side copies named `<prefix><millis>`, all but the newest [keepCopies].
+List<String> oldCopies(List<String> names) {
+  int stamp(String n) => int.tryParse(n.substring(n.lastIndexOf('-') + 1)) ?? 0;
+  final sorted = [...names]..sort((a, b) => stamp(b).compareTo(stamp(a)));
+  return sorted.skip(keepCopies).toList();
+}
+
 /// Persists the app's single JSON document.
 abstract class DataStorage {
   /// Human-readable description of where data lives.

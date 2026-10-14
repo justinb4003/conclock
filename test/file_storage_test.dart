@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:conclock/storage/storage_base.dart';
 import 'package:conclock/storage/storage_io.dart';
 import 'package:conclock/store.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -99,5 +100,21 @@ void main() {
       expect(reopened.loadError, contains('wasn’t found'));
       reopened.dispose();
     });
+  });
+
+  test('keeps only the newest few side copies per kind', () async {
+    final storage = FileStorage(supportDir: dir);
+    await storage.write('{}');
+    for (var i = 0; i < 5; i++) {
+      await storage.keepCopy('pre-import', 'copy $i');
+      await Future<void>.delayed(const Duration(milliseconds: 3));
+    }
+    await storage.keepCopy('corrupt', 'other kind');
+    final copies = dir.listSync().whereType<File>().map((f) => f.path);
+    final imports = copies.where((p) => p.contains('.pre-import-')).toList();
+    expect(imports, hasLength(keepCopies));
+    final kept = {for (final p in imports) File(p).readAsStringSync()};
+    expect(kept, {'copy 2', 'copy 3', 'copy 4'});
+    expect(copies.where((p) => p.contains('.corrupt-')), hasLength(1));
   });
 }

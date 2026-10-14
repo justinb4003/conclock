@@ -168,5 +168,16 @@ class FileStorage extends DataStorage {
     } else if (await f.exists()) {
       await f.copy(copy.path);
     }
+    // Each is a full copy: keep only the newest few of this kind.
+    final prefix = '${f.path}.$tag-';
+    final copies = [
+      await for (final e in f.parent.list())
+        if (e is File && e.path.startsWith(prefix)) e.path,
+    ];
+    for (final old in oldCopies(copies)) {
+      try {
+        await File(old).delete();
+      } catch (_) {}
+    }
   }
 }

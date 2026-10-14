@@ -15,11 +15,18 @@ const _jsonType = XTypeGroup(
   uniformTypeIdentifiers: ['public.json'],
 );
 
-Future<void> exportBackup(BuildContext context) async {
-  final store = StoreScope.read(context);
-  final name = 'conclock-backup-${fmtIsoDate(DateTime.now())}.json';
+Future<void> exportBackup(BuildContext context) =>
+    exportJsonAs(context, 'backup', StoreScope.read(context).exportJson());
+
+/// Saves [json] as `conclock-[kind]-<date>.json` where the user picks.
+Future<void> exportJsonAs(
+  BuildContext context,
+  String kind,
+  String json,
+) async {
+  final name = 'conclock-$kind-${fmtIsoDate(DateTime.now())}.json';
   try {
-    final message = await saveTextFile(name, store.exportJson(), _jsonType);
+    final message = await saveTextFile(name, json, _jsonType);
     if (message != null && context.mounted) toast(context, message);
   } catch (e) {
     if (context.mounted) toast(context, 'Export failed: $e');

@@ -1,6 +1,9 @@
 @TestOn('browser')
 library;
 
+import 'dart:async';
+import 'dart:js_interop';
+
 import 'package:conclock/storage/storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:web/web.dart' as web;
@@ -29,4 +32,38 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 100));
     expect(heard, ['{"from":"tab 1"}']);
   });
+
+  test('keeps only the newest few side copies', () async {
+    final s = createStorage();
+    await s.write('{"current":1}');
+    for (var i = 0; i < 5; i++) {
+      await s.keepCopy('unsaved', 'copy $i');
+      await Future<void>.delayed(const Duration(milliseconds: 3));
+    }
+    final db = await _openDb();
+    final keys = await _keys(db);
+    expect(keys.where((k) => k.startsWith('data.unsaved-')), hasLength(3));
+    expect(keys, contains('data'));
+  });
+}
+
+Future<web.IDBDatabase> _openDb() {
+  final c = Completer<web.IDBDatabase>();
+  final req = web.window.indexedDB.open('conclock', 1);
+  req.onsuccess = ((web.Event _) => c.complete(
+    req.result as web.IDBDatabase,
+  )).toJS;
+  return c.future;
+}
+
+Future<List<String>> _keys(web.IDBDatabase db) {
+  final c = Completer<List<String>>();
+  final req = db
+      .transaction('kv'.toJS, 'readonly')
+      .objectStore('kv')
+      .getAllKeys();
+  req.onsuccess = ((web.Event _) => c.complete([
+    for (final k in (req.result as JSArray<JSString>).toDart) k.toDart,
+  ])).toJS;
+  return c.future;
 }

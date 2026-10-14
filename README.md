@@ -33,7 +33,8 @@ Stopping or switching away from an entry with no note asks for a task name
   Writes are atomic (temp file + rename); unreadable files are kept as
   `conclock.json.corrupt-<timestamp>`. If the file changes elsewhere (another
   instance, a sync) while you have unsaved edits, those are kept as
-  `conclock.json.unsaved-<timestamp>` and a message says so.
+  `conclock.json.unsaved-<timestamp>` and a message says so (with an
+  Export button). The newest 3 side copies of each kind are kept.
 - Web: the browser's IndexedDB (database `conclock`), which holds years of
   entries; data from older versions in `localStorage` moves over on first
   load.
@@ -60,11 +61,11 @@ GitHub Actions (`.github/workflows/build.yml`) tests and builds on every push:
 Linux x64 and arm64 (`.tar.gz` and `.deb`), Windows x64 (setup `.exe`), macOS
 universal (`.dmg`) and Android (`.apk`) as workflow artifacts. Pushes to `main` also deploy the web app to GitHub Pages:
 https://justinb4003.github.io/conclock/ (data stays in your browser; open
-tabs stay in sync). Push a `v*` tag (e.g. `git tag v0.4.0 && git push --tags`) to
+tabs stay in sync). Push a `v*` tag (e.g. `git tag v0.4.1 && git push --tags`) to
 publish them as a GitHub release.
 
 ```sh
-sudo apt install ./conclock_0.4.0_amd64.deb   # installs to /opt/conclock
+sudo apt install ./conclock_0.4.1_amd64.deb   # installs to /opt/conclock
 tool/package_deb.sh                             # build the .deb locally
 ```
 

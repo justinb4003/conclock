@@ -181,6 +181,7 @@ void main() {
     storage.onChange!(jsonEncode(other.toJson()));
     expect(store.clients.single.name, 'Theirs');
     expect(storage.copies['unsaved'], contains('Mine, not yet saved'));
+    expect(store.setAside, contains('Mine, not yet saved')); // for Export
     expect(notified, isTrue);
     expect(store.takeNotice(), contains('set aside'));
     expect(store.takeNotice(), isNull); // shown once

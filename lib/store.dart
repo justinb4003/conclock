@@ -34,6 +34,10 @@ class AppStore extends ChangeNotifier {
   /// edits were set aside because another instance saved first.
   String? _notice;
 
+  /// The edits most recently set aside that way, for exporting (on the web
+  /// the side copy is otherwise out of reach).
+  String? setAside;
+
   /// The pending notice, if any; clears it.
   String? takeNotice() {
     final n = _notice;
@@ -122,12 +126,13 @@ class AppStore extends ChangeNotifier {
     // Another browser tab saved: adopt its data so we don't overwrite it.
     _storage.watch((raw) {
       try {
-        final unsaved = _dirty ? jsonEncode(toJson()) : null;
+        final unsaved = _dirty ? exportJson() : null;
         _apply(raw);
         _dirty = false;
         _saveTimer?.cancel();
         _saveTimer = null;
         if (unsaved != null) {
+          setAside = unsaved;
           // Edits made here moments ago lose to the other writer; keep them
           // on the side rather than dropping them silently.
           _notice =
@@ -325,8 +330,9 @@ class AppStore extends ChangeNotifier {
     final seen = <String, Set<String>>{};
     for (final e in entries) {
       final end = e.end;
+      if (end == null || end.isBefore(cutoff)) continue;
       final note = e.note.trim();
-      if (end == null || end.isBefore(cutoff) || note.isEmpty) continue;
+      if (note.isEmpty) continue;
       if (seen.putIfAbsent(e.clientId, () => {}).add(note)) {
         tasks.putIfAbsent(e.clientId, () => []).add(note);
       }

@@ -60,7 +60,18 @@ class _HomeScreenState extends State<HomeScreen> {
   /// instance saved first).
   void _showNotice() {
     final notice = _store?.takeNotice();
-    if (notice != null && mounted) toast(context, notice);
+    if (notice == null || !mounted) return;
+    final setAside = _store?.setAside;
+    toast(
+      context,
+      notice,
+      action: setAside == null
+          ? null
+          : SnackBarAction(
+              label: 'Export',
+              onPressed: () => exportJsonAs(context, 'set-aside', setAside),
+            ),
+    );
   }
 
   Widget get _page => switch (_index) {
