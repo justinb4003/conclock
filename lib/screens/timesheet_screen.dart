@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../format.dart';
 import '../models.dart';
 import '../store.dart';
+import '../widgets/common.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/live_builder.dart';
 
@@ -99,20 +100,9 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                 onPressed: sheet.rows.isEmpty ? null : () => _copy(sheet),
                 icon: const Icon(Icons.content_copy),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 4, right: 12),
-                child: SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(value: false, label: Text('h:mm')),
-                    ButtonSegment(value: true, label: Text('Decimal')),
-                  ],
-                  selected: {store.decimalHours},
-                  showSelectedIcon: false,
-                  style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  onSelectionChanged: (s) => store.setDecimalHours(s.first),
-                ),
+              const Padding(
+                padding: EdgeInsets.only(left: 4, right: 12),
+                child: HoursFormatToggle(),
               ),
             ],
           ),
@@ -200,6 +190,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                     ? const Center(child: Text('No time this week'))
                     : _Grid(
                         sheet: sheet,
+                        now: now,
                         decimal: store.decimalHours,
                         expanded: _expanded,
                         onToggle: (id) => setState(() {
@@ -273,8 +264,7 @@ class _Sheet {
     // Oldest first so tooltip entries read chronologically.
     final entries = store.entriesIn(from, addDays(from, 7)).toList().reversed;
     for (final e in entries) {
-      // Round: DST days aren't exactly 24h.
-      final day = (dayStart(e.start).difference(from).inHours / 24).round();
+      final day = daysBetween(from, e.start);
       final d = e.durationAt(now);
       final line = byClient.putIfAbsent(
         e.clientId,
@@ -285,15 +275,9 @@ class _Sheet {
       task.raw[day] += d;
       task.entries[day].add(e);
     }
-    final order = {
-      for (var i = 0; i < store.clients.length; i++) store.clients[i].id: i,
-    };
-    final rows = byClient.values.toList()
-      ..sort(
-        (a, b) => (order[a.id] ?? order.length).compareTo(
-          order[b.id] ?? order.length,
-        ),
-      );
+    final rows = [
+      for (final id in store.inClientOrder(byClient.keys)) byClient[id]!,
+    ];
     for (final r in rows) {
       for (final t in r._tasks.values) {
         t.days = rounding == Rounding.task
@@ -321,26 +305,90 @@ class _Sheet {
 class _Grid extends StatelessWidget {
   const _Grid({
     required this.sheet,
+    required this.now,
     required this.decimal,
     required this.expanded,
     required this.onToggle,
   });
 
   final _Sheet sheet;
+  final DateTime now;
   final bool decimal;
   final Set<String> expanded;
   final ValueChanged<String> onToggle;
 
   String _fmt(Duration d) =>
-      d == Duration.zero ? '' : (decimal ? fmtDecimal(d) : fmtHm(d));
+      d == Duration.zero ? '' : fmtHours(d, decimal: decimal);
+
+  String _dayName(BuildContext context, int i) =>
+      '${_weekdays[i]} '
+      '${MaterialLocalizations.of(context).formatShortMonthDay(addDays(sheet.from, i))}';
+
+  String _actual(Duration shown, Duration raw) =>
+      shown == raw ? '' : '  (actual ${_fmt(raw)})';
+
+  static TextSpan _heading(String title, String subtitle) => TextSpan(
+    children: [
+      TextSpan(
+        text: '$title\n',
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      TextSpan(text: subtitle),
+    ],
+  );
+
+  /// Client cell: that day's tasks with hours.
+  InlineSpan _clientTip(BuildContext context, _ClientLine c, int i) => TextSpan(
+    children: [
+      _heading(c.name, _dayName(context, i)),
+      for (final t in c.tasks)
+        if (t.raw[i] > Duration.zero)
+          TextSpan(
+            text:
+                '\n${_fmt(t.days[i]).padLeft(5)}  ${t.label}'
+                '${_actual(t.days[i], t.raw[i])}',
+          ),
+      if (c.days[i] != c.tasks.fold(Duration.zero, (a, t) => a + t.days[i]))
+        TextSpan(
+          text:
+              '\nDay rounded up to ${_fmt(c.days[i])}'
+              '${_actual(c.days[i], c.raw[i])}',
+          style: const TextStyle(fontStyle: FontStyle.italic),
+        ),
+    ],
+  );
+
+  /// Task cell: the individual time blocks.
+  InlineSpan _taskTip(
+    BuildContext context,
+    _ClientLine c,
+    _TaskLine t,
+    int i,
+  ) => TextSpan(
+    children: [
+      _heading('${c.name} · ${t.label}', _dayName(context, i)),
+      if (t.days[i] != t.raw[i])
+        TextSpan(
+          text:
+              '\nRounded up to ${_fmt(t.days[i])}'
+              '${_actual(t.days[i], t.raw[i])}',
+          style: const TextStyle(fontStyle: FontStyle.italic),
+        ),
+      for (final e in t.entries[i])
+        TextSpan(
+          text:
+              '\n${fmtTime(context, e.start)} – '
+              '${e.isRunning ? 'now' : fmtTime(context, e.end!)}'
+              '   ${_fmt(e.durationAt(now))}',
+        ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final loc = MaterialLocalizations.of(context);
-    final today = dayStart(DateTime.now());
-    final todayCol = (today.difference(sheet.from).inHours / 24).round();
+    final todayCol = daysBetween(sheet.from, DateTime.now());
     final numStyle = theme.textTheme.bodyMedium?.copyWith(
       fontFeatures: const [FontFeature.tabularFigures()],
     );
@@ -368,7 +416,7 @@ class _Grid extends StatelessWidget {
           Color? bg,
           InlineSpan? tip,
         }) {
-          Widget c = Container(
+          final c = Container(
             width: width,
             height: height,
             color: bg,
@@ -376,75 +424,44 @@ class _Grid extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Text(text, style: style),
           );
-          if (tip != null && text.isNotEmpty) {
-            c = Tooltip(
-              richMessage: tip,
-              textStyle: tipStyle,
-              triggerMode: TooltipTriggerMode.tap,
-              waitDuration: const Duration(milliseconds: 250),
-              showDuration: const Duration(seconds: 6),
-              child: c,
-            );
-          }
-          return c;
+          if (tip == null || text.isEmpty) return c;
+          return Tooltip(
+            richMessage: tip,
+            textStyle: tipStyle,
+            triggerMode: TooltipTriggerMode.tap,
+            waitDuration: const Duration(milliseconds: 250),
+            showDuration: const Duration(seconds: 6),
+            child: c,
+          );
         }
 
-        TextSpan heading(String a, String b) => TextSpan(
+        /// One grid row: label, Mon–Sun cells, week total.
+        Widget cells({
+          required Widget label,
+          required double height,
+          required List<Duration> days,
+          required Duration total,
+          TextStyle? style,
+          TextStyle? totalStyle,
+          InlineSpan Function(int day)? tip,
+        }) => Row(
           children: [
-            TextSpan(
-              text: '$a\n',
-              style: const TextStyle(fontWeight: FontWeight.w700),
+            SizedBox(width: nameW + 16, height: height, child: label),
+            for (var i = 0; i < 7; i++)
+              cell(
+                _fmt(days[i]),
+                width: _dayW,
+                height: height,
+                style: style,
+                bg: colBg(i),
+                tip: tip?.call(i),
+              ),
+            cell(
+              _fmt(total),
+              width: _totalW,
+              height: height,
+              style: totalStyle ?? style,
             ),
-            TextSpan(text: b),
-          ],
-        );
-
-        String dayName(int i) =>
-            '${_weekdays[i]} ${loc.formatShortMonthDay(addDays(sheet.from, i))}';
-
-        // Client cell: that day's tasks with hours.
-        String actual(Duration shown, Duration raw) =>
-            shown == raw ? '' : '  (actual ${_fmt(raw)})';
-
-        InlineSpan clientTip(_ClientLine c, int i) => TextSpan(
-          children: [
-            heading(c.name, dayName(i)),
-            for (final t in c.tasks)
-              if (t.raw[i] > Duration.zero)
-                TextSpan(
-                  text:
-                      '\n${_fmt(t.days[i]).padLeft(5)}  ${t.label}'
-                      '${actual(t.days[i], t.raw[i])}',
-                ),
-            if (c.days[i] !=
-                c.tasks.fold(Duration.zero, (a, t) => a + t.days[i]))
-              TextSpan(
-                text:
-                    '\nDay rounded up to ${_fmt(c.days[i])}'
-                    '${actual(c.days[i], c.raw[i])}',
-                style: const TextStyle(fontStyle: FontStyle.italic),
-              ),
-          ],
-        );
-
-        // Task cell: the individual time blocks.
-        InlineSpan taskTip(_ClientLine c, _TaskLine t, int i) => TextSpan(
-          children: [
-            heading('${c.name} · ${t.label}', dayName(i)),
-            if (t.days[i] != t.raw[i])
-              TextSpan(
-                text:
-                    '\nRounded up to ${_fmt(t.days[i])}'
-                    '${actual(t.days[i], t.raw[i])}',
-                style: const TextStyle(fontStyle: FontStyle.italic),
-              ),
-            for (final e in t.entries[i])
-              TextSpan(
-                text:
-                    '\n${fmtTime(context, e.start)} – '
-                    '${e.isRunning ? 'now' : fmtTime(context, e.end!)}'
-                    '   ${_fmt(e.durationAt(DateTime.now()))}',
-              ),
           ],
         );
 
@@ -503,13 +520,11 @@ class _Grid extends StatelessWidget {
           ),
         );
 
-        final rows = <Widget>[];
-        for (final c in sheet.rows) {
-          final open = expanded.contains(c.id);
-          rows.add(
+        final rows = <Widget>[
+          for (final c in sheet.rows) ...[
             InkWell(
               onTap: () => onToggle(c.id),
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   border: Border(
                     top: BorderSide(
@@ -517,131 +532,82 @@ class _Grid extends StatelessWidget {
                     ),
                   ),
                 ),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: nameW + 16,
-                      height: _rowH,
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 8),
-                          AnimatedRotation(
-                            turns: open ? 0.25 : 0,
-                            duration: const Duration(milliseconds: 120),
-                            child: Icon(
-                              Icons.chevron_right,
-                              size: 20,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          CircleAvatar(
-                            radius: 6,
-                            backgroundColor: Color(
-                              c.client?.color ?? clientPalette.last,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              c.name,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
+                child: cells(
+                  height: _rowH,
+                  days: c.days,
+                  total: c.total,
+                  style: numStyle,
+                  totalStyle: bold,
+                  tip: (i) => _clientTip(context, c, i),
+                  label: Row(
+                    children: [
+                      const SizedBox(width: 8),
+                      Chevron(open: expanded.contains(c.id)),
+                      const SizedBox(width: 4),
+                      CircleAvatar(
+                        radius: 6,
+                        backgroundColor: Color(
+                          c.client?.color ?? clientPalette.last,
+                        ),
                       ),
-                    ),
-                    for (var i = 0; i < 7; i++)
-                      cell(
-                        _fmt(c.days[i]),
-                        width: _dayW,
-                        height: _rowH,
-                        style: numStyle,
-                        bg: colBg(i),
-                        tip: clientTip(c, i),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          c.name,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    cell(
-                      _fmt(c.total),
-                      width: _totalW,
-                      height: _rowH,
-                      style: bold,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          );
-          if (!open) continue;
-          for (final t in c.tasks) {
-            rows.add(
-              Row(
-                children: [
-                  Container(
-                    width: nameW + 16,
-                    height: _taskRowH,
+            if (expanded.contains(c.id))
+              for (final t in c.tasks)
+                cells(
+                  height: _taskRowH,
+                  days: t.days,
+                  total: t.total,
+                  style: muted,
+                  tip: (i) => _taskTip(context, c, t, i),
+                  label: Padding(
                     padding: const EdgeInsets.only(left: 56, right: 8),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      t.label,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        fontStyle: t.note.isEmpty ? FontStyle.italic : null,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        t.label,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontStyle: t.note.isEmpty ? FontStyle.italic : null,
+                        ),
                       ),
                     ),
                   ),
-                  for (var i = 0; i < 7; i++)
-                    cell(
-                      _fmt(t.days[i]),
-                      width: _dayW,
-                      height: _taskRowH,
-                      style: muted,
-                      bg: colBg(i),
-                      tip: taskTip(c, t, i),
-                    ),
-                  cell(
-                    _fmt(t.total),
-                    width: _totalW,
-                    height: _taskRowH,
-                    style: muted,
-                  ),
-                ],
-              ),
-            );
-          }
-        }
+                ),
+          ],
+        ];
 
-        final footer = Container(
+        final footer = DecoratedBox(
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: scheme.outline, width: 1.5)),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: nameW + 16,
-                height: _rowH,
-                padding: const EdgeInsets.only(left: 16),
+          child: cells(
+            height: _rowH,
+            days: sheet.dayTotals,
+            total: sheet.total,
+            style: bold,
+            totalStyle: bold?.copyWith(color: scheme.primary),
+            label: Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Total', style: theme.textTheme.titleSmall),
               ),
-              for (var i = 0; i < 7; i++)
-                cell(
-                  _fmt(sheet.dayTotals[i]),
-                  width: _dayW,
-                  height: _rowH,
-                  style: bold,
-                  bg: colBg(i),
-                ),
-              cell(
-                _fmt(sheet.total),
-                width: _totalW,
-                height: _rowH,
-                style: bold?.copyWith(color: scheme.primary),
-              ),
-            ],
+            ),
           ),
         );
 

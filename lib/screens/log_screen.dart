@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../format.dart';
 import '../models.dart';
 import '../store.dart';
+import '../widgets/common.dart';
 import '../widgets/entry_editor.dart';
 import '../widgets/live_builder.dart';
 
@@ -26,11 +27,6 @@ class _LogScreenState extends State<LogScreen> {
 
   /// Flattens the grouping into rows for a lazy ListView.
   List<_Item> _items(AppStore store) {
-    final order = {
-      for (var i = 0; i < store.clients.length; i++) store.clients[i].id: i,
-    };
-    int rank(String id) => order[id] ?? store.clients.length;
-
     final items = <_Item>[];
     final all = store.entries; // newest first
     var i = 0;
@@ -50,10 +46,7 @@ class _LogScreenState extends State<LogScreen> {
             .putIfAbsent(e.note.trim(), () => [])
             .add(e);
       }
-      final clientIds = byClient.keys.toList()
-        ..sort((a, b) => rank(a).compareTo(rank(b)));
-
-      for (final id in clientIds) {
+      for (final id in store.inClientOrder(byClient.keys)) {
         final client = store.clientById(id);
         final tasks = byClient[id]!;
         final clientKey = '${fmtIsoDate(day)}|$id';
@@ -89,18 +82,9 @@ class _LogScreenState extends State<LogScreen> {
       appBar: AppBar(
         title: const Text('Log'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('h:mm')),
-                ButtonSegment(value: true, label: Text('Decimal')),
-              ],
-              selected: {decimal},
-              showSelectedIcon: false,
-              style: const ButtonStyle(visualDensity: VisualDensity.compact),
-              onSelectionChanged: (s) => store.setDecimalHours(s.first),
-            ),
+          const Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: HoursFormatToggle(),
           ),
         ],
       ),
@@ -196,11 +180,9 @@ class _Sum extends StatelessWidget {
       enabled: running,
       builder: (context, now) {
         final d = entries.fold(Duration.zero, (a, e) => a + e.durationAt(now));
-        final text = decimal
-            ? fmtDecimal(d)
-            : running && seconds
+        final text = !decimal && running && seconds
             ? fmtClock(d)
-            : fmtHm(d);
+            : fmtHours(d, decimal: decimal);
         return Text(
           text,
           style: (style ?? DefaultTextStyle.of(context).style).copyWith(
@@ -259,7 +241,7 @@ class _ClientRow extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 10, 16, 10),
         child: Row(
           children: [
-            _Chevron(open: item.open),
+            Chevron(open: item.open),
             const SizedBox(width: 4),
             CircleAvatar(
               radius: 6,
@@ -303,7 +285,7 @@ class _TaskRow extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(36, 8, 16, 8),
         child: Row(
           children: [
-            _Chevron(open: item.open),
+            Chevron(open: item.open),
             const SizedBox(width: 6),
             Expanded(
               child: Text.rich(
@@ -374,21 +356,4 @@ class _EntryRow extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Chevron extends StatelessWidget {
-  const _Chevron({required this.open});
-
-  final bool open;
-
-  @override
-  Widget build(BuildContext context) => AnimatedRotation(
-    turns: open ? 0.25 : 0,
-    duration: const Duration(milliseconds: 120),
-    child: Icon(
-      Icons.chevron_right,
-      size: 20,
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
-    ),
-  );
 }

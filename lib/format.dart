@@ -24,12 +24,21 @@ Duration roundUpHalfHour(Duration d) {
 /// 1.08
 String fmtDecimal(Duration d) => (d.inSeconds / 3600).toStringAsFixed(2);
 
+/// Hours in the user's chosen format: 1.08 or 1:05.
+String fmtHours(Duration d, {required bool decimal}) =>
+    decimal ? fmtDecimal(d) : fmtHm(d);
+
 /// 2026-10-12
 String fmtIsoDate(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
 
 DateTime dayStart(DateTime d) => DateTime(d.year, d.month, d.day);
 
 DateTime addDays(DateTime d, int n) => DateTime(d.year, d.month, d.day + n);
+
+/// Whole calendar days from [from] to [to]'s day (DST-safe: such days
+/// aren't exactly 24h).
+int daysBetween(DateTime from, DateTime to) =>
+    (dayStart(to).difference(dayStart(from)).inHours / 24).round();
 
 /// Monday of [d]'s week (timesheet weeks run Mon–Sun).
 DateTime weekStart(DateTime d) => addDays(dayStart(d), 1 - d.weekday);

@@ -106,16 +106,6 @@ class _TrackerScreenState extends State<TrackerScreen> {
     }
   }
 
-  Future<void> _addClient() async {
-    final name = await promptText(
-      context,
-      title: 'New client',
-      hint: 'Client name',
-      confirmLabel: 'Add',
-    );
-    if (name != null) _store!.addClient(name);
-  }
-
   /// A client row, or a task row under it when [task] is set. Shows today's
   /// total, ticking while running.
   Widget _row(
@@ -168,7 +158,7 @@ class _TrackerScreenState extends State<TrackerScreen> {
         actions: [
           IconButton(
             tooltip: 'Add client',
-            onPressed: _addClient,
+            onPressed: () => showAddClient(context),
             icon: const Icon(Icons.person_add_alt),
           ),
         ],
@@ -181,7 +171,7 @@ class _TrackerScreenState extends State<TrackerScreen> {
                   const Text('No clients yet'),
                   const SizedBox(height: 12),
                   FilledButton.icon(
-                    onPressed: _addClient,
+                    onPressed: () => showAddClient(context),
                     icon: const Icon(Icons.add),
                     label: const Text('Add a client'),
                   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models.dart';
+import '../store.dart';
 
 Future<String?> promptText(
   BuildContext context, {
@@ -71,6 +72,18 @@ class _PromptDialogState extends State<_PromptDialog> {
       ],
     );
   }
+}
+
+/// Asks for a name and adds the client.
+Future<void> showAddClient(BuildContext context) async {
+  final store = StoreScope.read(context);
+  final name = await promptText(
+    context,
+    title: 'New client',
+    hint: 'Client name',
+    confirmLabel: 'Add',
+  );
+  if (name != null) store.addClient(name);
 }
 
 Future<bool> confirm(

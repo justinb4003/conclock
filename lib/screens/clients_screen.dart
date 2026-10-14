@@ -9,17 +9,6 @@ import '../widgets/dialogs.dart';
 class ClientsScreen extends StatelessWidget {
   const ClientsScreen({super.key});
 
-  Future<void> _add(BuildContext context) async {
-    final store = StoreScope.read(context);
-    final name = await promptText(
-      context,
-      title: 'New client',
-      hint: 'Client name',
-      confirmLabel: 'Add',
-    );
-    if (name != null) store.addClient(name);
-  }
-
   Future<void> _rename(BuildContext context, Client c) async {
     final store = StoreScope.read(context);
     final name = await promptText(
@@ -109,7 +98,7 @@ class ClientsScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         tooltip: 'Add client',
-        onPressed: () => _add(context),
+        onPressed: () => showAddClient(context),
         child: const Icon(Icons.add),
       ),
       body: clients.isEmpty

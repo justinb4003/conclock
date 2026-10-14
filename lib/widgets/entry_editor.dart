@@ -36,7 +36,9 @@ class _EntryEditorState extends State<_EntryEditor> {
   DateTime? _end;
   late final TextEditingController _note;
 
-  bool get _running => widget.entry?.isRunning ?? false;
+  /// Fixed when the dialog opens, so a timer stopped meanwhile (another tab
+  /// or window) can't leave the form half running, half not.
+  late final bool _running = widget.entry?.isRunning ?? false;
 
   @override
   void initState() {
@@ -156,7 +158,9 @@ class _EntryEditorState extends State<_EntryEditor> {
         e,
         clientId: _clientId,
         start: _start,
-        end: _running ? null : _end,
+        // Running: keep whatever the timer is doing now (it may have been
+        // stopped elsewhere while this was open).
+        end: _running ? store.entryById(e.id)?.end : _end,
         note: _note.text.trim(),
       );
     }

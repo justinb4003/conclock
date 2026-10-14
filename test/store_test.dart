@@ -205,6 +205,28 @@ void main() {
     expect(storage.copies, isEmpty);
   });
 
+  test('edits through stale objects reach the reloaded data', () async {
+    await store.load();
+    final a = store.addClient('Acme');
+    store.toggle(a.id, note: 'Design');
+    final staleEntry = store.running!;
+    final staleClient = store.clients.single;
+
+    // Another tab saves the same data: objects get replaced.
+    storage.onChange!(jsonEncode(store.toJson()));
+    expect(identical(store.running, staleEntry), isFalse);
+
+    store.setNote(staleEntry, 'Design review');
+    store.renameClient(staleClient, 'Acme Corp');
+    expect(store.running!.note, 'Design review');
+    expect(store.clients.single.name, 'Acme Corp');
+
+    t = t.add(const Duration(hours: 1));
+    store.stop();
+    store.deleteEntry(staleEntry);
+    expect(store.entries, isEmpty);
+  });
+
   test('corrupt data does not crash load', () async {
     storage.data = '{not json';
     await store.load();

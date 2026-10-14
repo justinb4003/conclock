@@ -182,6 +182,15 @@ class AppStore extends ChangeNotifier {
     return null;
   }
 
+  /// Sorts client ids into the user's client order (unknown ids last).
+  List<String> inClientOrder(Iterable<String> ids) {
+    final rank = {for (var i = 0; i < clients.length; i++) clients[i].id: i};
+    return ids.toList()..sort(
+      (a, b) =>
+          (rank[a] ?? clients.length).compareTo(rank[b] ?? clients.length),
+    );
+  }
+
   int entryCount(String clientId) =>
       entries.where((e) => e.clientId == clientId).length;
 
@@ -197,14 +206,6 @@ class AppStore extends ChangeNotifier {
           (totals[e.clientId] ?? Duration.zero) + e.durationAt(now);
     }
     return totals;
-  }
-
-  // --------------------------------------------------------------- settings
-
-  void setDecimalHours(bool v) {
-    if (decimalHours == v) return;
-    decimalHours = v;
-    _changed();
   }
 
   /// Distinct task names (notes) per client from finished entries that ended
@@ -241,6 +242,14 @@ class AppStore extends ChangeNotifier {
       }
     }
     return total;
+  }
+
+  // --------------------------------------------------------------- settings
+
+  void setDecimalHours(bool v) {
+    if (decimalHours == v) return;
+    decimalHours = v;
+    _changed();
   }
 
   void setRounding(Rounding v) {
@@ -293,8 +302,23 @@ class AppStore extends ChangeNotifier {
     if (!e.end!.isAfter(e.start)) entries.remove(e);
   }
 
-  void setNote(Entry e, String note) {
-    if (e.note == note) return;
+  /// [e] as currently held. Objects get replaced when another tab or window's
+  /// save is adopted, so callers holding older ones (e.g. an open dialog)
+  /// still act on the right entry.
+  Entry? _liveEntry(Entry e) => entries.contains(e) ? e : entryById(e.id);
+
+  Entry? entryById(String id) {
+    for (final x in entries) {
+      if (x.id == id) return x;
+    }
+    return null;
+  }
+
+  Client? _liveClient(Client c) => clients.contains(c) ? c : clientById(c.id);
+
+  void setNote(Entry stale, String note) {
+    final e = _liveEntry(stale);
+    if (e == null || e.note == note) return;
     e.note = note;
     _changed();
   }
@@ -307,13 +331,16 @@ class AppStore extends ChangeNotifier {
     _changed();
   }
 
+  /// Saves edits to [stale]; if it was deleted meanwhile, adds it back.
   void updateEntry(
-    Entry e, {
+    Entry stale, {
     required String clientId,
     required DateTime start,
     required DateTime? end,
     required String note,
   }) {
+    final e = _liveEntry(stale) ?? stale;
+    if (!entries.contains(e)) entries.add(e);
     e
       ..clientId = clientId
       ..start = start
@@ -323,7 +350,9 @@ class AppStore extends ChangeNotifier {
     _changed();
   }
 
-  void deleteEntry(Entry e) {
+  void deleteEntry(Entry stale) {
+    final e = _liveEntry(stale);
+    if (e == null) return;
     entries.remove(e);
     _changed();
   }
@@ -344,17 +373,23 @@ class AppStore extends ChangeNotifier {
     return c;
   }
 
-  void renameClient(Client c, String name) {
+  void renameClient(Client stale, String name) {
+    final c = _liveClient(stale);
+    if (c == null) return;
     c.name = name.trim();
     _changed();
   }
 
-  void setClientColor(Client c, int color) {
+  void setClientColor(Client stale, int color) {
+    final c = _liveClient(stale);
+    if (c == null) return;
     c.color = color;
     _changed();
   }
 
-  void setArchived(Client c, bool archived) {
+  void setArchived(Client stale, bool archived) {
+    final c = _liveClient(stale);
+    if (c == null) return;
     c.archived = archived;
     final r = running;
     if (archived && r != null && r.clientId == c.id) _stopEntry(r, now());
@@ -362,7 +397,9 @@ class AppStore extends ChangeNotifier {
   }
 
   /// Deletes the client and all of its entries.
-  void deleteClient(Client c) {
+  void deleteClient(Client stale) {
+    final c = _liveClient(stale);
+    if (c == null) return;
     clients.remove(c);
     entries.removeWhere((e) => e.clientId == c.id);
     _changed();
