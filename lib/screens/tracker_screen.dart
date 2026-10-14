@@ -201,134 +201,153 @@ class _TrackerScreenState extends State<TrackerScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ConClock'),
-        actions: [
-          if (withTasks.isNotEmpty)
-            IconButton(
-              tooltip: anyExpanded ? 'Hide all tasks' : 'Show all tasks',
-              onPressed: () => store.setCollapsed(withTasks, anyExpanded),
-              icon: Icon(anyExpanded ? Icons.unfold_less : Icons.unfold_more),
-            ),
-          IconButton(
-            tooltip: 'Quick switch',
-            onPressed: () => showQuickSwitch(context),
-            icon: const Icon(Icons.search),
-          ),
-          IconButton(
-            tooltip: 'Add client',
-            onPressed: () => showAddClient(context),
-            icon: const Icon(Icons.person_add_alt),
-          ),
-        ],
-      ),
-      body: clients.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('No clients yet'),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () => showAddClient(context),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add a client'),
-                  ),
-                ],
-              ),
-            )
-          : Column(
-              children: [
-                _StatusPanel(
-                  running: running,
-                  client: running == null
-                      ? null
-                      : store.clientById(running.clientId),
-                  note: _note,
-                  noteFocus: _noteFocus,
-                  onStop: _stop,
-                  // Enter commits the note: it shows up as a running task.
-                  onNoteSubmitted: () => setState(_noteFocus.unfocus),
-                  onNoteChanged: (v) {
-                    if (running != null) store.setNote(running, v);
-                  },
-                  todayTotal: (now) => store
-                      .totalsIn(today, addDays(today, 1), now)
-                      .values
-                      .fold(Duration.zero, (a, b) => a + b),
+      // No app bar: the status card leads, with the list's tools under it.
+      body: SafeArea(
+        bottom: false,
+        child: clients.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('No clients yet'),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () => showAddClient(context),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add a client'),
+                    ),
+                  ],
                 ),
-                Expanded(
-                  // A Column, not a ListView: rows keep their state when
-                  // reordered, so they can slide to their new place.
-                  child: SingleChildScrollView(
-                    controller: _scroll,
-                    padding: const EdgeInsets.only(bottom: 24),
-                    child: SlideStage(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (final c in clients)
-                            SlideOnMove(
-                              key: ValueKey('client ${c.id}'),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _row(
-                                    store,
-                                    c,
-                                    null,
-                                    running?.clientId == c.id,
-                                    today,
-                                    now,
-                                    totals[c.id],
-                                    expanded: withTasks.contains(c.id)
-                                        ? !store.collapsedClients.contains(c.id)
-                                        : null,
-                                  ),
-                                  for (final task in _visibleTasks(
-                                    c.id,
-                                    tasks[c.id] ?? const [],
-                                    running?.clientId == c.id
-                                        ? runningTask
-                                        : null,
-                                    collapsed: store.collapsedClients.contains(
-                                      c.id,
-                                    ),
-                                  ))
-                                    SlideOnMove(
-                                      key: ValueKey('task ${c.id}/$task'),
-                                      child: _row(
-                                        store,
-                                        c,
-                                        task,
-                                        running?.clientId == c.id &&
-                                            runningTask == task,
-                                        today,
-                                        now,
-                                        null,
-                                      ),
-                                    ),
-                                  if ((tasks[c.id]?.length ?? 0) > _taskCap &&
-                                      !store.collapsedClients.contains(c.id))
-                                    _MoreTasks(
-                                      showingAll: _showAllTasks.contains(c.id),
-                                      hidden: tasks[c.id]!.length - _taskCap,
-                                      onTap: () => setState(() {
-                                        if (!_showAllTasks.remove(c.id)) {
-                                          _showAllTasks.add(c.id);
-                                        }
-                                      }),
-                                    ),
-                                ],
-                              ),
+              )
+            : Column(
+                children: [
+                  _StatusPanel(
+                    running: running,
+                    client: running == null
+                        ? null
+                        : store.clientById(running.clientId),
+                    note: _note,
+                    noteFocus: _noteFocus,
+                    onStop: _stop,
+                    // Enter commits the note: it shows up as a running task.
+                    onNoteSubmitted: () => setState(_noteFocus.unfocus),
+                    onNoteChanged: (v) {
+                      if (running != null) store.setNote(running, v);
+                    },
+                    todayTotal: (now) => store
+                        .totalsIn(today, addDays(today, 1), now)
+                        .values
+                        .fold(Duration.zero, (a, b) => a + b),
+                  ),
+                  // Hide/show all sits rightmost, above the clients' arrows.
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        IconButton(
+                          tooltip: 'Quick switch',
+                          onPressed: () => showQuickSwitch(context),
+                          icon: const Icon(Icons.search),
+                        ),
+                        IconButton(
+                          tooltip: 'Add client',
+                          onPressed: () => showAddClient(context),
+                          icon: const Icon(Icons.person_add_alt),
+                        ),
+                        if (withTasks.isNotEmpty)
+                          IconButton(
+                            tooltip: anyExpanded
+                                ? 'Hide all tasks'
+                                : 'Show all tasks',
+                            onPressed: () =>
+                                store.setCollapsed(withTasks, anyExpanded),
+                            icon: Icon(
+                              anyExpanded
+                                  ? Icons.unfold_less
+                                  : Icons.unfold_more,
                             ),
-                        ],
+                          ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    // A Column, not a ListView: rows keep their state when
+                    // reordered, so they can slide to their new place.
+                    child: SingleChildScrollView(
+                      controller: _scroll,
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: SlideStage(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final c in clients)
+                              SlideOnMove(
+                                key: ValueKey('client ${c.id}'),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    _row(
+                                      store,
+                                      c,
+                                      null,
+                                      running?.clientId == c.id,
+                                      today,
+                                      now,
+                                      totals[c.id],
+                                      expanded: withTasks.contains(c.id)
+                                          ? !store.collapsedClients.contains(
+                                              c.id,
+                                            )
+                                          : null,
+                                    ),
+                                    for (final task in _visibleTasks(
+                                      c.id,
+                                      tasks[c.id] ?? const [],
+                                      running?.clientId == c.id
+                                          ? runningTask
+                                          : null,
+                                      collapsed: store.collapsedClients
+                                          .contains(c.id),
+                                    ))
+                                      SlideOnMove(
+                                        key: ValueKey('task ${c.id}/$task'),
+                                        child: _row(
+                                          store,
+                                          c,
+                                          task,
+                                          running?.clientId == c.id &&
+                                              runningTask == task,
+                                          today,
+                                          now,
+                                          null,
+                                        ),
+                                      ),
+                                    if ((tasks[c.id]?.length ?? 0) > _taskCap &&
+                                        !store.collapsedClients.contains(c.id))
+                                      _MoreTasks(
+                                        showingAll: _showAllTasks.contains(
+                                          c.id,
+                                        ),
+                                        hidden: tasks[c.id]!.length - _taskCap,
+                                        onTap: () => setState(() {
+                                          if (!_showAllTasks.remove(c.id)) {
+                                            _showAllTasks.add(c.id);
+                                          }
+                                        }),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+      ),
     );
   }
 }
@@ -363,7 +382,7 @@ class _StatusPanel extends StatelessWidget {
         : Color(client!.color);
 
     return Card(
-      margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
       clipBehavior: Clip.antiAlias,
       child: Container(
         decoration: BoxDecoration(
