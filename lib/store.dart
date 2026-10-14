@@ -350,10 +350,24 @@ class AppStore extends ChangeNotifier {
     _changed();
   }
 
-  void deleteEntry(Entry stale) {
+  /// Deletes [stale]'s entry. Returns a function that undoes it.
+  VoidCallback deleteEntry(Entry stale) {
     final e = _liveEntry(stale);
-    if (e == null) return;
+    if (e == null) return () {};
     entries.remove(e);
+    _changed();
+    return () => _restore([e]);
+  }
+
+  /// Puts deleted entries back (skipping any that reappeared meanwhile). A
+  /// restored running entry stops now if something else started since.
+  void _restore(List<Entry> deleted) {
+    for (final e in deleted) {
+      if (entryById(e.id) != null) continue;
+      if (e.isRunning && running != null) e.end = now();
+      entries.add(e);
+    }
+    _sort();
     _changed();
   }
 
@@ -396,13 +410,22 @@ class AppStore extends ChangeNotifier {
     _changed();
   }
 
-  /// Deletes the client and all of its entries.
-  void deleteClient(Client stale) {
+  /// Deletes the client and all of its entries. Returns a function that
+  /// undoes it.
+  VoidCallback deleteClient(Client stale) {
     final c = _liveClient(stale);
-    if (c == null) return;
+    if (c == null) return () {};
+    final index = clients.indexOf(c);
+    final removed = entries.where((e) => e.clientId == c.id).toList();
     clients.remove(c);
     entries.removeWhere((e) => e.clientId == c.id);
     _changed();
+    return () {
+      if (clientById(c.id) == null) {
+        clients.insert(index.clamp(0, clients.length), c);
+      }
+      _restore(removed);
+    };
   }
 
   void moveClient(int from, int to) {

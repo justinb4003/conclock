@@ -30,7 +30,8 @@ class ClientsScreen extends StatelessWidget {
           : 'This also deletes $n time ${n == 1 ? 'entry' : 'entries'}. '
                 'Archive instead to keep the history.',
     );
-    if (ok) store.deleteClient(c);
+    if (!ok || !context.mounted) return;
+    toast(context, 'Deleted ${c.name}', undo: store.deleteClient(c));
   }
 
   void _showDataLocation(BuildContext context) {

@@ -227,6 +227,40 @@ void main() {
     expect(store.entries, isEmpty);
   });
 
+  test('undo restores deleted entries and clients', () {
+    final a = store.addClient('Acme');
+    final b = store.addClient('Globex');
+    store.toggle(a.id, note: 'Design');
+    t = t.add(const Duration(hours: 1));
+    store.toggle(b.id, note: 'Call');
+    t = t.add(const Duration(hours: 1));
+    store.stop();
+
+    final undoEntry = store.deleteEntry(store.entries.last); // Design
+    expect(store.entries.length, 1);
+    undoEntry();
+    expect(store.entries.map((e) => e.note), ['Call', 'Design']);
+
+    final undoClient = store.deleteClient(a);
+    expect(store.clients.map((c) => c.name), ['Globex']);
+    expect(store.entries.single.note, 'Call');
+    undoClient();
+    expect(store.clients.map((c) => c.name), ['Acme', 'Globex']);
+    expect(store.entries.length, 2);
+  });
+
+  test('undoing a running entry\'s delete doesn\'t leave two running', () {
+    final a = store.addClient('Acme');
+    store.toggle(a.id);
+    t = t.add(const Duration(minutes: 5));
+    final undo = store.deleteEntry(store.running!);
+    store.toggle(a.id, note: 'Other');
+    t = t.add(const Duration(minutes: 5));
+    undo();
+    expect(store.entries.where((e) => e.isRunning).length, 1);
+    expect(store.running!.note, 'Other');
+  });
+
   test('corrupt data does not crash load', () async {
     storage.data = '{not json';
     await store.load();

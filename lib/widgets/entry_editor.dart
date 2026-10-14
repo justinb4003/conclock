@@ -167,16 +167,11 @@ class _EntryEditorState extends State<_EntryEditor> {
     Navigator.pop(context);
   }
 
-  Future<void> _delete() async {
-    final store = StoreScope.read(context);
-    final ok = await confirm(
-      context,
-      title: 'Delete entry?',
-      message: 'This can’t be undone.',
-    );
-    if (!ok || !mounted) return;
-    store.deleteEntry(widget.entry!);
+  void _delete() {
+    final messenger = ScaffoldMessenger.of(context);
+    final undo = StoreScope.read(context).deleteEntry(widget.entry!);
     Navigator.pop(context);
+    showToast(messenger, 'Entry deleted', undo: undo);
   }
 
   @override

@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import '../format.dart';
 import '../models.dart';
 import '../store.dart';
+import '../tracking.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/live_builder.dart';
-import '../widgets/name_task_dialog.dart';
 
 /// Tap a client to start it; tap again (or another) to stop / switch.
 class TrackerScreen extends StatefulWidget {
@@ -65,44 +65,19 @@ class _TrackerScreenState extends State<TrackerScreen> {
     super.dispose();
   }
 
-  /// If the running entry has no name, asks for one before it's stopped.
-  /// Returns false if the user backed out, or the entry was discarded and
-  /// there's nothing left to do.
-  Future<bool> _nameRunning({required bool stopOnly}) async {
-    final r = _store!.running;
-    if (r == null || r.note.trim().isNotEmpty) return true;
-    _noteFocus.unfocus();
-    final choice = await askTaskName(context, r);
-    if (choice == null || !mounted) return false;
-    // Discarding the entry the user was stopping finishes the action.
-    return !(choice == StopChoice.discard && stopOnly);
-  }
-
   Future<void> _stop() async {
-    final store = _store!;
-    final at = store.now();
-    if (!await _nameRunning(stopOnly: true)) return;
     _noteFocus.unfocus();
-    store.stop(at: at);
+    await stopTracking(context);
   }
 
   /// Starts/stops [c]; with [task], resumes that task (its note prefilled).
   Future<void> _toggle(Client c, {String? task}) async {
-    final store = _store!;
-    final at = store.now();
-    final r = store.running;
-    final stopOnly =
-        r != null &&
-        r.clientId == c.id &&
-        (task == null || r.note.trim() == task);
-    if (!await _nameRunning(stopOnly: stopOnly)) return;
-    final started = store.toggle(c.id, note: task, at: at);
-    if (started != null && task == null && _autofocusNote) {
+    _noteFocus.unfocus();
+    final started = await toggleTracking(context, c, task: task);
+    if (started != null && task == null && _autofocusNote && mounted) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => _noteFocus.requestFocus(),
       );
-    } else {
-      _noteFocus.unfocus();
     }
   }
 

@@ -143,10 +143,26 @@ Future<int?> pickColor(BuildContext context, int current) {
   );
 }
 
-void toast(BuildContext context, String message) {
-  ScaffoldMessenger.of(context)
+/// Shows [message]; with [undo], adds an Undo button.
+void toast(BuildContext context, String message, {VoidCallback? undo}) =>
+    showToast(ScaffoldMessenger.of(context), message, undo: undo);
+
+/// [toast] for when the caller's context is about to go away (e.g. a dialog
+/// that's closing): grab the messenger first.
+void showToast(
+  ScaffoldMessengerState messenger,
+  String message, {
+  VoidCallback? undo,
+}) {
+  messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        action: undo == null
+            ? null
+            : SnackBarAction(label: 'Undo', onPressed: undo),
+      ),
     );
 }
