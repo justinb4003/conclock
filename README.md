@@ -12,8 +12,8 @@ one JSON file.
   rounding up to ½ h, per task or per client-day.
 - **Clients** — add, rename, recolor, drag to reorder, archive, delete.
 
-Keyboard: Ctrl/⌘+K quick switch, +1–9 toggle a client, +. stop, +N add
-time. Right-click (long-press) a task to rename or merge it. Timers left
+🔍 on Track: type to find a client or task and start it. Right-click
+(long-press) a task to rename or merge it. Timers left
 running 9h+, or through a computer sleep, prompt "still working?".
 
 Stopping or switching away from an entry with no note asks for a task name

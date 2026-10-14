@@ -159,7 +159,7 @@ class _TrackerScreenState extends State<TrackerScreen> {
         title: const Text('ConClock'),
         actions: [
           IconButton(
-            tooltip: 'Quick switch (${modKey}K)',
+            tooltip: 'Quick switch',
             onPressed: () => showQuickSwitch(context),
             icon: const Icon(Icons.search),
           ),
@@ -329,7 +329,7 @@ class _StatusPanel extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       IconButton.filledTonal(
-                        tooltip: 'Stop ($modKey.)',
+                        tooltip: 'Stop',
                         onPressed: onStop,
                         icon: const Icon(Icons.stop),
                       ),

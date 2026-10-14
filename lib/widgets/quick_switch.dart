@@ -1,21 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models.dart';
 import '../store.dart';
 import '../tracking.dart';
-
-/// "Ctrl" on most platforms, "⌘" on Apple ones.
-String get modKey => _apple ? '⌘' : 'Ctrl+';
-
-bool get _apple =>
-    defaultTargetPlatform == TargetPlatform.macOS ||
-    defaultTargetPlatform == TargetPlatform.iOS;
-
-/// Ctrl (⌘ on Apple) + [key].
-SingleActivator modShortcut(LogicalKeyboardKey key) =>
-    SingleActivator(key, control: !_apple, meta: _apple);
 
 class _Choice {
   const _Choice(this.client, this.task, this.label, {this.running = false});
@@ -164,16 +152,7 @@ class _QuickSwitchState extends State<_QuickSwitch> {
                       },
                     ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-              child: Text(
-                '↑↓ Enter · ${modKey}1–9 clients · $modKey. stop · '
-                '${modKey}N add time',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
