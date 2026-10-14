@@ -93,7 +93,14 @@ class _TrackerScreenState extends State<TrackerScreen> {
   }
 
   /// The most recent tasks (all, if expanded), plus the running one.
-  List<String> _visibleTasks(String clientId, List<String> all, String? run) {
+  /// Collapsed: just the running one.
+  List<String> _visibleTasks(
+    String clientId,
+    List<String> all,
+    String? run, {
+    required bool collapsed,
+  }) {
+    if (collapsed) return [if (run != null && all.contains(run)) run];
     if (_showAllTasks.contains(clientId) || all.length <= _taskCap) return all;
     final shown = all.take(_taskCap).toList();
     if (run != null && all.contains(run) && !shown.contains(run)) {
@@ -111,8 +118,9 @@ class _TrackerScreenState extends State<TrackerScreen> {
     bool isRunning,
     DateTime today,
     DateTime now,
-    Duration? clientTotal,
-  ) {
+    Duration? clientTotal, {
+    bool? expanded,
+  }) {
     final tomorrow = addDays(today, 1);
     Duration totalAt(DateTime t) => task == null
         ? store.totalsIn(today, tomorrow, t)[c.id] ?? Duration.zero
@@ -126,6 +134,10 @@ class _TrackerScreenState extends State<TrackerScreen> {
       total: isRunning ? null : clientTotal ?? totalAt(now),
       liveTotal: isRunning ? totalAt : null,
       onTap: () => _toggle(c, task: task),
+      expanded: expanded,
+      onExpand: expanded == null
+          ? null
+          : () => store.setCollapsed([c.id], expanded),
     );
     if (task == null) return row;
     return TaskMenuRegion(
@@ -154,11 +166,24 @@ class _TrackerScreenState extends State<TrackerScreen> {
       final list = tasks.putIfAbsent(running!.clientId, () => []);
       if (!list.contains(runningTask)) list.insert(0, runningTask);
     }
+    final withTasks = [
+      for (final c in clients)
+        if (tasks[c.id]?.isNotEmpty ?? false) c.id,
+    ];
+    final anyExpanded = withTasks.any(
+      (id) => !store.collapsedClients.contains(id),
+    );
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('ConClock'),
         actions: [
+          if (withTasks.isNotEmpty)
+            IconButton(
+              tooltip: anyExpanded ? 'Hide all tasks' : 'Show all tasks',
+              onPressed: () => store.setCollapsed(withTasks, anyExpanded),
+              icon: Icon(anyExpanded ? Icons.unfold_less : Icons.unfold_more),
+            ),
           IconButton(
             tooltip: 'Quick switch',
             onPressed: () => showQuickSwitch(context),
@@ -219,11 +244,15 @@ class _TrackerScreenState extends State<TrackerScreen> {
                           today,
                           now,
                           totals[c.id],
+                          expanded: withTasks.contains(c.id)
+                              ? !store.collapsedClients.contains(c.id)
+                              : null,
                         ),
                         for (final task in _visibleTasks(
                           c.id,
                           tasks[c.id] ?? const [],
                           running?.clientId == c.id ? runningTask : null,
+                          collapsed: store.collapsedClients.contains(c.id),
                         ))
                           _row(
                             store,
@@ -234,7 +263,8 @@ class _TrackerScreenState extends State<TrackerScreen> {
                             now,
                             null,
                           ),
-                        if ((tasks[c.id]?.length ?? 0) > _taskCap)
+                        if ((tasks[c.id]?.length ?? 0) > _taskCap &&
+                            !store.collapsedClients.contains(c.id))
                           _MoreTasks(
                             showingAll: _showAllTasks.contains(c.id),
                             hidden: tasks[c.id]!.length - _taskCap,
@@ -392,6 +422,8 @@ class _TrackRow extends StatelessWidget {
     required this.total,
     required this.liveTotal,
     required this.onTap,
+    this.expanded,
+    this.onExpand,
   });
 
   final Color color;
@@ -401,6 +433,13 @@ class _TrackRow extends StatelessWidget {
   final Duration? total;
   final Duration Function(DateTime now)? liveTotal;
   final VoidCallback onTap;
+
+  /// Client rows with tasks: whether they're shown, and the toggle.
+  final bool? expanded;
+  final VoidCallback? onExpand;
+
+  /// Room for the expand button, kept on every row so totals line up.
+  static const _expandW = 36.0;
 
   @override
   Widget build(BuildContext context) {
@@ -441,12 +480,36 @@ class _TrackRow extends StatelessWidget {
             ? const TextStyle(fontWeight: FontWeight.w600)
             : null,
       ),
-      trailing: liveTotal != null
-          ? LiveBuilder(
-              builder: (context, now) =>
-                  Text(fmtHm(liveTotal!(now)), style: style),
-            )
-          : Text(total == Duration.zero ? '' : fmtHm(total!), style: style),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          liveTotal != null
+              ? LiveBuilder(
+                  builder: (context, now) =>
+                      Text(fmtHm(liveTotal!(now)), style: style),
+                )
+              : Text(total == Duration.zero ? '' : fmtHm(total!), style: style),
+          SizedBox(
+            width: _expandW,
+            child: onExpand == null
+                ? null
+                : IconButton(
+                    tooltip: expanded! ? 'Hide tasks' : 'Show tasks',
+                    onPressed: onExpand,
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                    icon: AnimatedRotation(
+                      turns: expanded! ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 120),
+                      child: Icon(
+                        Icons.expand_more,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -57,6 +57,9 @@ class AppStore extends ChangeNotifier {
   /// Show times and durations in a monospace font.
   bool monoTimes = false;
 
+  /// Clients whose tasks are hidden on the Track screen.
+  final Set<String> collapsedClients = {};
+
   Timer? _saveTimer;
   bool _dirty = false;
   Future<void> _writing = Future.value();
@@ -165,6 +168,10 @@ class AppStore extends ChangeNotifier {
         Entry.fromJson(e as Map<String, dynamic>),
     ];
     final settings = data['settings'] as Map<String, dynamic>? ?? const {};
+    final collapsed = [
+      for (final id in settings['collapsedClients'] as List? ?? const [])
+        id as String,
+    ];
     clients
       ..clear()
       ..addAll(newClients);
@@ -177,6 +184,9 @@ class AppStore extends ChangeNotifier {
         Rounding.values.asNameMap()[settings['rounding']] ?? Rounding.off;
     closeToTray = settings['closeToTray'] as bool? ?? true;
     monoTimes = settings['monoTimes'] as bool? ?? false;
+    collapsedClients
+      ..clear()
+      ..addAll(collapsed);
   }
 
   // ------------------------------------------------------------- backups
@@ -205,6 +215,10 @@ class AppStore extends ChangeNotifier {
       'rounding': rounding.name,
       'closeToTray': closeToTray,
       'monoTimes': monoTimes,
+      'collapsedClients': [
+        for (final id in collapsedClients)
+          if (clientById(id) != null) id,
+      ],
     },
     'clients': [for (final c in clients) c.toJson()],
     'entries': [for (final e in entries) e.toJson()],
@@ -375,6 +389,14 @@ class AppStore extends ChangeNotifier {
     if (monoTimes == v) return;
     monoTimes = v;
     _changed();
+  }
+
+  /// Hides (or shows) the Track screen's tasks under [ids].
+  void setCollapsed(Iterable<String> ids, bool collapsed) {
+    final changed = collapsed
+        ? ids.map(collapsedClients.add).toList().contains(true)
+        : ids.map(collapsedClients.remove).toList().contains(true);
+    if (changed) _changed();
   }
 
   void setRounding(Rounding v) {
