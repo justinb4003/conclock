@@ -384,7 +384,7 @@ class _StatusPanel extends StatelessWidget {
                   Text.rich(
                     TextSpan(
                       children: [
-                        const TextSpan(text: 'Today '),
+                        const TextSpan(text: 'Time Today '),
                         timeSpan(context, fmtHm(todayTotal(DateTime.now()))),
                       ],
                     ),
@@ -440,17 +440,30 @@ class _StatusPanel extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   LiveBuilder(
-                    builder: (context, now) => Text.rich(
-                      TextSpan(
-                        children: [
-                          const TextSpan(text: 'Started '),
-                          timeSpan(context, fmtTime(context, r.start)),
-                          const TextSpan(text: ' · Today '),
-                          timeSpan(context, fmtHm(todayTotal(now))),
-                        ],
-                      ),
+                    builder: (context, now) => DefaultTextStyle.merge(
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      child: Row(
+                        children: [
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                const TextSpan(text: 'Started '),
+                                timeSpan(context, fmtTime(context, r.start)),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                const TextSpan(text: 'Time Today '),
+                                timeSpan(context, fmtHm(todayTotal(now))),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
