@@ -7,6 +7,7 @@ import '../store.dart';
 import '../tracking.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/live_builder.dart';
+import '../widgets/task_menu.dart';
 
 /// Tap a client to start it; tap again (or another) to stop / switch.
 class TrackerScreen extends StatefulWidget {
@@ -49,12 +50,16 @@ class _TrackerScreenState extends State<TrackerScreen> {
     }
   }
 
-  /// Load the running entry's note into the field when the entry changes.
+  /// Load the running entry's note into the field when the entry changes,
+  /// or when it changed elsewhere (e.g. a task rename) while not editing.
   void _syncNote() {
     final r = _store!.running;
-    if (r?.id == _noteEntryId) return;
+    final note = r?.note ?? '';
+    if (r?.id == _noteEntryId && (_noteFocus.hasFocus || _note.text == note)) {
+      return;
+    }
     _noteEntryId = r?.id;
-    _note.text = r?.note ?? '';
+    _note.text = note;
   }
 
   @override
@@ -96,7 +101,7 @@ class _TrackerScreenState extends State<TrackerScreen> {
     Duration totalAt(DateTime t) => task == null
         ? store.totalsIn(today, tomorrow, t)[c.id] ?? Duration.zero
         : store.taskTotalIn(c.id, task, today, tomorrow, t);
-    return _TrackRow(
+    final row = _TrackRow(
       key: ValueKey(task == null ? c.id : '${c.id}/$task'),
       color: Color(c.color),
       label: task ?? c.name,
@@ -105,6 +110,13 @@ class _TrackerScreenState extends State<TrackerScreen> {
       total: isRunning ? null : clientTotal ?? totalAt(now),
       liveTotal: isRunning ? totalAt : null,
       onTap: () => _toggle(c, task: task),
+    );
+    if (task == null) return row;
+    return TaskMenuRegion(
+      key: ValueKey('menu ${c.id}/$task'),
+      clientId: c.id,
+      task: task,
+      child: row,
     );
   }
 

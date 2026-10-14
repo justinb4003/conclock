@@ -9,6 +9,7 @@ Future<String?> promptText(
   String initial = '',
   String hint = '',
   String confirmLabel = 'Save',
+  TextCapitalization capitalization = TextCapitalization.words,
 }) {
   return showDialog<String>(
     context: context,
@@ -17,6 +18,7 @@ Future<String?> promptText(
       initial: initial,
       hint: hint,
       confirmLabel: confirmLabel,
+      capitalization: capitalization,
     ),
   );
 }
@@ -27,12 +29,14 @@ class _PromptDialog extends StatefulWidget {
     required this.initial,
     required this.hint,
     required this.confirmLabel,
+    required this.capitalization,
   });
 
   final String title;
   final String initial;
   final String hint;
   final String confirmLabel;
+  final TextCapitalization capitalization;
 
   @override
   State<_PromptDialog> createState() => _PromptDialogState();
@@ -60,7 +64,7 @@ class _PromptDialogState extends State<_PromptDialog> {
         controller: _controller,
         autofocus: true,
         decoration: InputDecoration(hintText: widget.hint),
-        textCapitalization: TextCapitalization.words,
+        textCapitalization: widget.capitalization,
         onSubmitted: (_) => _submit(),
       ),
       actions: [

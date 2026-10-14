@@ -333,6 +333,37 @@ class AppStore extends ChangeNotifier {
 
   Client? _liveClient(Client c) => clients.contains(c) ? c : clientById(c.id);
 
+  bool hasTask(String clientId, String task) =>
+      entries.any((e) => e.clientId == clientId && e.note.trim() == task);
+
+  /// Renames task [from] to [to] on [clientId]'s entries (all of them, or
+  /// just those in [only]). Renaming onto an existing task merges the two.
+  /// Returns how many entries changed and a function that undoes it.
+  ({int count, VoidCallback undo}) renameTask(
+    String clientId,
+    String from,
+    String to, {
+    Iterable<Entry>? only,
+  }) {
+    final targets = [
+      for (final e in only ?? entries)
+        if (_liveEntry(e) case final live?)
+          if (live.clientId == clientId && live.note.trim() == from) live,
+    ];
+    final before = {for (final e in targets) e.id: e.note};
+    for (final e in targets) {
+      e.note = to.trim();
+    }
+    _changed();
+    return (
+      count: targets.length,
+      undo: () {
+        before.forEach((id, note) => entryById(id)?.note = note);
+        _changed();
+      },
+    );
+  }
+
   void setNote(Entry stale, String note) {
     final e = _liveEntry(stale);
     if (e == null || e.note == note) return;

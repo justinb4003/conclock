@@ -6,6 +6,7 @@ import '../store.dart';
 import '../widgets/common.dart';
 import '../widgets/entry_editor.dart';
 import '../widgets/live_builder.dart';
+import '../widgets/task_menu.dart';
 
 /// Entries grouped day → client → task → individual entries, with a sum at
 /// every level. Clients start expanded, tasks collapsed. Tap an entry to edit.
@@ -60,7 +61,7 @@ class _LogScreenState extends State<LogScreen> {
         for (final MapEntry(key: note, value: list) in tasks.entries) {
           final taskKey = '$clientKey|$note';
           final taskOpen = _expandedTasks.contains(taskKey);
-          items.add(_TaskItem(taskKey, note, list, taskOpen));
+          items.add(_TaskItem(taskKey, id, note, list, taskOpen));
           if (taskOpen) {
             for (final e in list) {
               items.add(_EntryItem(e));
@@ -144,9 +145,10 @@ class _ClientItem extends _Item {
 }
 
 class _TaskItem extends _Item {
-  const _TaskItem(this.key, this.note, super.entries, this.open);
+  const _TaskItem(this.key, this.clientId, this.note, super.entries, this.open);
 
   final String key;
+  final String clientId;
   final String note;
   final bool open;
 }
@@ -279,7 +281,7 @@ class _TaskRow extends StatelessWidget {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
     final n = item.entries.length;
-    return InkWell(
+    final row = InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(36, 8, 16, 8),
@@ -321,6 +323,13 @@ class _TaskRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+    // "No note" is per-day: naming it names just this day's entries.
+    return TaskMenuRegion(
+      clientId: item.clientId,
+      task: item.note,
+      only: item.note.isEmpty ? item.entries : null,
+      child: row,
     );
   }
 }
