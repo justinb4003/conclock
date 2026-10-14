@@ -306,6 +306,20 @@ class AppStore extends ChangeNotifier {
     return e;
   }
 
+  /// Takes [from]..now out of the running entry: it ends at [from] and the
+  /// same client/task carries on in a new entry starting now.
+  void removeGap(DateTime from) {
+    final r = running;
+    if (r == null) return;
+    final t = now();
+    _stopEntry(r, from.isBefore(r.start) ? r.start : from);
+    entries.insert(
+      0,
+      Entry(id: newId(), clientId: r.clientId, start: t, note: r.note),
+    );
+    _changed();
+  }
+
   void stop({DateTime? at}) {
     final r = running;
     if (r == null) return;
