@@ -160,5 +160,10 @@ MyApplication* my_application_new() {
 
   return MY_APPLICATION(g_object_new(my_application_get_type(),
                                      "application-id", APPLICATION_ID, "flags",
-                                     G_APPLICATION_DEFAULT_FLAGS, nullptr));
+                                     // No flags: unique, so a second launch
+                                     // re-shows this window. (Spelled out as
+                                     // 0 since G_APPLICATION_DEFAULT_FLAGS
+                                     // needs GLib 2.74.)
+                                     static_cast<GApplicationFlags>(0),
+                                     nullptr));
 }
