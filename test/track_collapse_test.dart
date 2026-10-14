@@ -52,6 +52,7 @@ void main() {
     expect(find.text('Design'), findsOneWidget);
     expect(find.text('Migration'), findsOneWidget);
 
+    await tester.pumpAndSettle(); // rows slide into place
     await tester.tap(find.byTooltip('Hide tasks').last);
     await store.flush();
     final reloaded = AppStore(storage: storage);

@@ -9,6 +9,7 @@ import '../widgets/common.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/live_builder.dart';
 import '../widgets/quick_switch.dart';
+import '../widgets/slide_on_move.dart';
 import '../widgets/task_menu.dart';
 
 /// Tap a client to start it; tap again (or another) to stop / switch.
@@ -24,6 +25,10 @@ class _TrackerScreenState extends State<TrackerScreen> {
   final _noteFocus = FocusNode();
   AppStore? _store;
   String? _noteEntryId;
+  final _scroll = ScrollController();
+
+  /// The running client, to notice when another one starts.
+  String? _runningClient;
 
   /// Tasks shown per client before "N more". Static so it survives tabs.
   static const _taskCap = 3;
@@ -73,6 +78,7 @@ class _TrackerScreenState extends State<TrackerScreen> {
     _store?.removeListener(_syncNote);
     _note.dispose();
     _noteFocus.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -92,7 +98,7 @@ class _TrackerScreenState extends State<TrackerScreen> {
     }
   }
 
-  /// The most recent tasks (all, if expanded), plus the running one.
+  /// The running task, then the most recent ones (all, if expanded).
   /// Collapsed: just the running one.
   List<String> _visibleTasks(
     String clientId,
@@ -100,13 +106,14 @@ class _TrackerScreenState extends State<TrackerScreen> {
     String? run, {
     required bool collapsed,
   }) {
-    if (collapsed) return [if (run != null && all.contains(run)) run];
-    if (_showAllTasks.contains(clientId) || all.length <= _taskCap) return all;
-    final shown = all.take(_taskCap).toList();
-    if (run != null && all.contains(run) && !shown.contains(run)) {
-      shown.add(run);
+    final running = run != null && all.contains(run);
+    if (collapsed) return [if (running) run];
+    // The running task leads; the rest keep most-recent-first order.
+    final ordered = running ? [run, ...all.where((t) => t != run)] : all;
+    if (_showAllTasks.contains(clientId) || all.length <= _taskCap) {
+      return ordered;
     }
-    return shown;
+    return ordered.take(_taskCap).toList();
   }
 
   /// A client row, or a task row under it when [task] is set. Shows today's
@@ -152,7 +159,26 @@ class _TrackerScreenState extends State<TrackerScreen> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final running = store.running;
-    final clients = store.activeClients.toList();
+    // The running client leads; the rest keep the user's order.
+    final clients = [
+      ...store.activeClients.where((c) => c.id == running?.clientId),
+      ...store.activeClients.where((c) => c.id != running?.clientId),
+    ];
+    if (running?.clientId != _runningClient) {
+      _runningClient = running?.clientId;
+      // Show it arriving at the top.
+      if (running != null && _scroll.hasClients && _scroll.offset > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scroll.hasClients) {
+            _scroll.animateTo(
+              0,
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+            );
+          }
+        });
+      }
+    }
     final now = store.now();
     final today = dayStart(now);
     final totals = store.totalsIn(today, addDays(today, 1), now);
@@ -232,50 +258,73 @@ class _TrackerScreenState extends State<TrackerScreen> {
                       .fold(Duration.zero, (a, b) => a + b),
                 ),
                 Expanded(
-                  child: ListView(
+                  // A Column, not a ListView: rows keep their state when
+                  // reordered, so they can slide to their new place.
+                  child: SingleChildScrollView(
+                    controller: _scroll,
                     padding: const EdgeInsets.only(bottom: 24),
-                    children: [
-                      for (final c in clients) ...[
-                        _row(
-                          store,
-                          c,
-                          null,
-                          running?.clientId == c.id,
-                          today,
-                          now,
-                          totals[c.id],
-                          expanded: withTasks.contains(c.id)
-                              ? !store.collapsedClients.contains(c.id)
-                              : null,
-                        ),
-                        for (final task in _visibleTasks(
-                          c.id,
-                          tasks[c.id] ?? const [],
-                          running?.clientId == c.id ? runningTask : null,
-                          collapsed: store.collapsedClients.contains(c.id),
-                        ))
-                          _row(
-                            store,
-                            c,
-                            task,
-                            running?.clientId == c.id && runningTask == task,
-                            today,
-                            now,
-                            null,
-                          ),
-                        if ((tasks[c.id]?.length ?? 0) > _taskCap &&
-                            !store.collapsedClients.contains(c.id))
-                          _MoreTasks(
-                            showingAll: _showAllTasks.contains(c.id),
-                            hidden: tasks[c.id]!.length - _taskCap,
-                            onTap: () => setState(() {
-                              if (!_showAllTasks.remove(c.id)) {
-                                _showAllTasks.add(c.id);
-                              }
-                            }),
-                          ),
-                      ],
-                    ],
+                    child: SlideStage(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final c in clients)
+                            SlideOnMove(
+                              key: ValueKey('client ${c.id}'),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _row(
+                                    store,
+                                    c,
+                                    null,
+                                    running?.clientId == c.id,
+                                    today,
+                                    now,
+                                    totals[c.id],
+                                    expanded: withTasks.contains(c.id)
+                                        ? !store.collapsedClients.contains(c.id)
+                                        : null,
+                                  ),
+                                  for (final task in _visibleTasks(
+                                    c.id,
+                                    tasks[c.id] ?? const [],
+                                    running?.clientId == c.id
+                                        ? runningTask
+                                        : null,
+                                    collapsed: store.collapsedClients.contains(
+                                      c.id,
+                                    ),
+                                  ))
+                                    SlideOnMove(
+                                      key: ValueKey('task ${c.id}/$task'),
+                                      child: _row(
+                                        store,
+                                        c,
+                                        task,
+                                        running?.clientId == c.id &&
+                                            runningTask == task,
+                                        today,
+                                        now,
+                                        null,
+                                      ),
+                                    ),
+                                  if ((tasks[c.id]?.length ?? 0) > _taskCap &&
+                                      !store.collapsedClients.contains(c.id))
+                                    _MoreTasks(
+                                      showingAll: _showAllTasks.contains(c.id),
+                                      hidden: tasks[c.id]!.length - _taskCap,
+                                      onTap: () => setState(() {
+                                        if (!_showAllTasks.remove(c.id)) {
+                                          _showAllTasks.add(c.id);
+                                        }
+                                      }),
+                                    ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
