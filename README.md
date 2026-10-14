@@ -36,8 +36,8 @@ python3 tool/seed_test_data.py   # 4 weeks of 9-5 test data (--remove to undo)
 ## Releases
 
 GitHub Actions (`.github/workflows/build.yml`) tests and builds on every push:
-Linux x64 (`.tar.gz` and `.deb`) and Windows x64 (`.zip`) as workflow
-artifacts. Pushes to `main` also deploy the web app to GitHub Pages:
+Linux x64 (`.tar.gz` and `.deb`), Windows x64 (`.zip`) and macOS universal
+(`.dmg`) as workflow artifacts. Pushes to `main` also deploy the web app to GitHub Pages:
 https://justinb4003.github.io/conclock/ (data stays in your browser; open
 tabs stay in sync). Push a `v*` tag (e.g. `git tag v0.1.1 && git push --tags`) to
 publish them as a GitHub release.
@@ -46,3 +46,8 @@ publish them as a GitHub release.
 sudo apt install ./conclock_0.1.1_amd64.deb   # installs to /opt/conclock
 tool/package_deb.sh                             # build the .deb locally
 ```
+
+The macOS build is ad-hoc signed but not notarized (that needs a paid Apple
+Developer account), so the first launch is blocked: drag ConClock to
+Applications, try to open it, then allow it under System Settings → Privacy &
+Security → "Open Anyway". Or: `xattr -dr com.apple.quarantine /Applications/ConClock.app`.

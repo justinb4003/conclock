@@ -82,6 +82,35 @@ jobs:
           name: conclock-windows-x64
           path: dist/*
 
+  macos:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      # Universal (Apple Silicon + Intel), ad-hoc signed; not notarized.
+      - run: flutter build macos --release
+      - name: Package .dmg
+        run: |
+          VERSION=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
+          APP=build/macos/Build/Products/Release/ConClock.app
+          lipo -info "$APP/Contents/MacOS/ConClock"
+          STAGE=$(mktemp -d)
+          cp -R "$APP" "$STAGE/"
+          ln -s /Applications "$STAGE/Applications"
+          mkdir -p dist
+          hdiutil create -volname ConClock -srcfolder "$STAGE" -ov \
+            -format UDZO "dist/conclock-${VERSION}-macos.dmg"
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conclock-macos
+          path: dist/*
+
   web:
     needs: test
     runs-on: ubuntu-latest
@@ -118,7 +147,7 @@ jobs:
   release:
     # Push a tag like v1.0.0 to publish a GitHub release with the binaries.
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows]
+    needs: [linux, windows, macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
