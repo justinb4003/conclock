@@ -120,6 +120,21 @@ jobs:
           keyAlias=$KEY_ALIAS
           keyPassword=$KEYSTORE_PASSWORD
           EOF
+      # Gradle downloads the NDK once with no retry, and Google's server
+      # sometimes hands back a broken archive; fetch it here with retries.
+      - name: Install Android NDK
+        run: |
+          NDK=$(sed -n 's/.*val ndkVersion: String = "\(.*\)".*/\1/p' \
+            "$(dirname "$(dirname "$(which flutter)")")/packages/flutter_tools/gradle/src/main/kotlin/FlutterExtension.kt")
+          [ -n "$NDK" ] || { echo "NDK version not found"; exit 1; }
+          echo "NDK $NDK"
+          for i in 1 2 3 4 5; do
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK" >/dev/null \
+              && [ -f "$ANDROID_HOME/ndk/$NDK/source.properties" ] && exit 0
+            rm -rf "$ANDROID_HOME/ndk/$NDK"
+            echo "attempt $i failed; retrying"; sleep 30
+          done
+          exit 1
       - run: flutter build apk --release
       - name: Package APK
         run: |
