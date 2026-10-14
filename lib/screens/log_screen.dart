@@ -9,7 +9,8 @@ import '../widgets/live_builder.dart';
 import '../widgets/task_menu.dart';
 
 /// Entries grouped day → client → task → individual entries, with a sum at
-/// every level. Clients start expanded, tasks collapsed. Tap an entry to edit.
+/// every level. Clients start expanded, tasks collapsed; the unfold buttons
+/// collapse a day (or all days) to client rows. Tap an entry to edit.
 class LogScreen extends StatefulWidget {
   const LogScreen({super.key});
 
@@ -37,7 +38,8 @@ class _LogScreenState extends State<LogScreen> {
       while (i < all.length && dayStart(all[i].start) == day) {
         dayEntries.add(all[i++]);
       }
-      items.add(_DayItem(day, dayEntries));
+      final dayItem = _DayItem(day, dayEntries);
+      items.add(dayItem);
 
       // Tasks keep newest-first order since entries arrive that way.
       final byClient = <String, Map<String, List<Entry>>>{};
@@ -52,6 +54,8 @@ class _LogScreenState extends State<LogScreen> {
         final tasks = byClient[id]!;
         final clientKey = '${fmtIsoDate(day)}|$id';
         final open = !_collapsedClients.contains(clientKey);
+        dayItem.clientKeys.add(clientKey);
+        if (open) dayItem.open = true;
         items.add(
           _ClientItem(clientKey, client, [
             for (final list in tasks.values) ...list,
@@ -73,16 +77,34 @@ class _LogScreenState extends State<LogScreen> {
     return items;
   }
 
+  /// Collapses [days] to their client rows, or expands them if none is open.
+  void _toggleDays(Iterable<_DayItem> days) => setState(() {
+    final keys = [for (final d in days) ...d.clientKeys];
+    if (days.any((d) => d.open)) {
+      _collapsedClients.addAll(keys);
+    } else {
+      _collapsedClients.removeAll(keys);
+    }
+  });
+
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final items = _items(store);
     final decimal = store.decimalHours;
+    final days = items.whereType<_DayItem>();
+    final anyOpen = days.any((d) => d.open);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Log'),
         actions: [
+          if (items.isNotEmpty)
+            IconButton(
+              tooltip: anyOpen ? 'Collapse all' : 'Expand all',
+              onPressed: () => _toggleDays(days),
+              icon: Icon(anyOpen ? Icons.unfold_less : Icons.unfold_more),
+            ),
           const Padding(
             padding: EdgeInsets.only(right: 12),
             child: HoursFormatToggle(),
@@ -100,7 +122,11 @@ class _LogScreenState extends State<LogScreen> {
               padding: const EdgeInsets.only(bottom: 88),
               itemCount: items.length,
               itemBuilder: (context, i) => switch (items[i]) {
-                _DayItem item => _DayHeader(item: item, decimal: decimal),
+                _DayItem item => _DayHeader(
+                  item: item,
+                  decimal: decimal,
+                  onToggle: () => _toggleDays([item]),
+                ),
                 _ClientItem item => _ClientRow(
                   item: item,
                   decimal: decimal,
@@ -131,9 +157,13 @@ sealed class _Item {
 }
 
 class _DayItem extends _Item {
-  const _DayItem(this.day, super.entries);
+  _DayItem(this.day, super.entries);
 
   final DateTime day;
+  final clientKeys = <String>[];
+
+  /// Any of the day's clients expanded.
+  bool open = false;
 }
 
 class _ClientItem extends _Item {
@@ -197,10 +227,15 @@ class _Sum extends StatelessWidget {
 }
 
 class _DayHeader extends StatelessWidget {
-  const _DayHeader({required this.item, required this.decimal});
+  const _DayHeader({
+    required this.item,
+    required this.decimal,
+    required this.onToggle,
+  });
 
   final _DayItem item;
   final bool decimal;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -209,10 +244,19 @@ class _DayHeader extends StatelessWidget {
       color: theme.colorScheme.primary,
     );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Row(
         children: [
-          Expanded(child: Text(fmtDay(context, item.day), style: style)),
+          Flexible(child: Text(fmtDay(context, item.day), style: style)),
+          IconButton(
+            tooltip: item.open ? 'Collapse day' : 'Expand day',
+            onPressed: onToggle,
+            visualDensity: VisualDensity.compact,
+            iconSize: 18,
+            color: theme.colorScheme.onSurfaceVariant,
+            icon: Icon(item.open ? Icons.unfold_less : Icons.unfold_more),
+          ),
+          const Spacer(),
           _Sum(entries: item.entries, decimal: decimal, style: style),
         ],
       ),

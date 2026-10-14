@@ -69,17 +69,40 @@ class _EntryEditorState extends State<_EntryEditor> {
     super.dispose();
   }
 
-  /// Puts the end on the start's day, or the next day if it would be earlier.
-  void _normalizeEnd() {
+  /// Calendar days from the start's day to the end's.
+  int get _endDays => _end == null ? 0 : daysBetween(_start, _end!);
+
+  /// Puts the end [days] after the start's day at time [t] (default: its
+  /// current time), moving it a day later while it isn't after the start.
+  void _placeEnd(int days, [TimeOfDay? t]) {
     final e = _end;
     if (e == null) return;
     final s = _start;
-    var end = DateTime(s.year, s.month, s.day, e.hour, e.minute, e.second);
-    if (!end.isAfter(s)) {
-      end = DateTime(s.year, s.month, s.day + 1, e.hour, e.minute, e.second);
+    final (h, m, sec) = t == null
+        ? (e.hour, e.minute, e.second)
+        : (t.hour, t.minute, 0);
+    var end = DateTime(s.year, s.month, s.day + days, h, m, sec);
+    while (!end.isAfter(s)) {
+      end = DateTime(end.year, end.month, end.day + 1, h, m, sec);
     }
     _end = end;
   }
+
+  /// The end a day earlier, if that's still after the start.
+  bool get _canEndEarlier {
+    final e = _end;
+    return e != null &&
+        DateTime(
+          e.year,
+          e.month,
+          e.day - 1,
+          e.hour,
+          e.minute,
+          e.second,
+        ).isAfter(_start);
+  }
+
+  void _shiftEndDay(int by) => setState(() => _placeEnd(_endDays + by));
 
   Future<void> _pickDate() async {
     final d = await showDatePicker(
@@ -89,6 +112,7 @@ class _EntryEditorState extends State<_EntryEditor> {
       lastDate: DateTime(2100),
     );
     if (d == null) return;
+    final days = _endDays;
     setState(() {
       _start = DateTime(
         d.year,
@@ -98,7 +122,7 @@ class _EntryEditorState extends State<_EntryEditor> {
         _start.minute,
         _start.second,
       );
-      _normalizeEnd();
+      _placeEnd(days);
     });
   }
 
@@ -108,6 +132,7 @@ class _EntryEditorState extends State<_EntryEditor> {
       initialTime: TimeOfDay.fromDateTime(_start),
     );
     if (t == null) return;
+    final days = _endDays;
     setState(() {
       _start = DateTime(
         _start.year,
@@ -116,7 +141,7 @@ class _EntryEditorState extends State<_EntryEditor> {
         t.hour,
         t.minute,
       );
-      _normalizeEnd();
+      _placeEnd(days);
     });
   }
 
@@ -126,10 +151,8 @@ class _EntryEditorState extends State<_EntryEditor> {
       initialTime: TimeOfDay.fromDateTime(_end!),
     );
     if (t == null) return;
-    setState(() {
-      _end = DateTime(_start.year, _start.month, _start.day, t.hour, t.minute);
-      _normalizeEnd();
-    });
+    // The first such time after the start; the day buttons go further.
+    setState(() => _placeEnd(0, t));
   }
 
   String? get _error {
@@ -185,7 +208,7 @@ class _EntryEditorState extends State<_EntryEditor> {
     final duration = _running
         ? now.difference(_start)
         : _end!.difference(_start);
-    final nextDay = !_running && dayStart(_end!) != dayStart(_start);
+    final endDays = _running ? 0 : _endDays;
     final error = _error;
     final overlaps = store.overlapping(
       _start,
@@ -256,7 +279,8 @@ class _EntryEditorState extends State<_EntryEditor> {
                       label: 'End',
                       value: _running
                           ? 'Running'
-                          : fmtTime(context, _end!) + (nextDay ? ' (+1d)' : ''),
+                          : fmtTime(context, _end!) +
+                                (endDays > 0 ? ' (+${endDays}d)' : ''),
                       icon: Icons.schedule,
                       onTap: _running ? null : _pickEnd,
                     ),
@@ -264,9 +288,35 @@ class _EntryEditorState extends State<_EntryEditor> {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                'Duration ${fmtHm(duration.isNegative ? Duration.zero : duration)}',
-                style: Theme.of(context).textTheme.bodySmall,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Duration ${fmtHm(duration.isNegative ? Duration.zero : duration)}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  if (!_running) ...[
+                    Text(
+                      'Ends ${MaterialLocalizations.of(context).formatShortMonthDay(_end!)}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    IconButton(
+                      tooltip: 'End a day earlier',
+                      visualDensity: VisualDensity.compact,
+                      iconSize: 18,
+                      onPressed: _canEndEarlier ? () => _shiftEndDay(-1) : null,
+                      icon: const Icon(Icons.remove),
+                    ),
+                    IconButton(
+                      tooltip: 'End a day later',
+                      visualDensity: VisualDensity.compact,
+                      iconSize: 18,
+                      onPressed: () => _shiftEndDay(1),
+                      icon: const Icon(Icons.add),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 12),
               TextField(
