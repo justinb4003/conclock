@@ -1,0 +1,158 @@
+import 'dart:convert';
+
+import 'package:conclock/models.dart';
+import 'package:conclock/storage/storage.dart';
+import 'package:conclock/store.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+class MemoryStorage implements DataStorage {
+  String? data;
+
+  @override
+  String get location => 'memory';
+
+  @override
+  Future<String?> read() async => data;
+
+  @override
+  Future<void> write(String d) async => data = d;
+
+  @override
+  Future<void> backupCorrupt() async {}
+}
+
+void main() {
+  late DateTime t;
+  late MemoryStorage storage;
+  late AppStore store;
+
+  setUp(() {
+    t = DateTime(2026, 10, 12, 9);
+    storage = MemoryStorage();
+    store = AppStore(storage: storage, clock: () => t);
+  });
+
+  test('toggle starts, switches and stops', () {
+    final a = store.addClient('Acme');
+    final b = store.addClient('Globex');
+
+    store.toggle(a.id);
+    expect(store.running?.clientId, a.id);
+
+    t = t.add(const Duration(hours: 1));
+    store.toggle(b.id);
+    expect(store.running?.clientId, b.id);
+    expect(store.entries.length, 2);
+
+    t = t.add(const Duration(minutes: 30));
+    store.toggle(b.id);
+    expect(store.running, isNull);
+
+    final totals = store.totalsIn(
+      DateTime(2026, 10, 12),
+      DateTime(2026, 10, 13),
+      t,
+    );
+    expect(totals[a.id], const Duration(hours: 1));
+    expect(totals[b.id], const Duration(minutes: 30));
+  });
+
+  test('short unnamed entries are kept; same-second ones dropped', () {
+    final a = store.addClient('Acme');
+    store.toggle(a.id);
+    store.toggle(a.id); // same second
+    expect(store.entries, isEmpty);
+
+    store.toggle(a.id);
+    t = t.add(const Duration(seconds: 5));
+    store.stop();
+    expect(store.entries.length, 1);
+  });
+
+  test('stop time comes from when the user acted', () {
+    final a = store.addClient('Acme');
+    store.toggle(a.id);
+    final clicked = t.add(const Duration(minutes: 30));
+    t = clicked.add(const Duration(minutes: 2)); // time spent in a prompt
+    store.stop(at: clicked);
+    expect(store.entries.single.end, clicked);
+  });
+
+  test('round-trips through JSON storage', () async {
+    final a = store.addClient('Acme');
+    store.toggle(a.id);
+    store.setNote(store.running!, 'Kickoff "notes"');
+    store.setDecimalHours(true);
+    store.setRounding(Rounding.day);
+    await store.flush();
+
+    final reloaded = AppStore(storage: storage);
+    await reloaded.load();
+    expect(reloaded.clients.single.name, 'Acme');
+    expect(reloaded.running?.note, 'Kickoff "notes"');
+    expect(reloaded.running?.start, DateTime(2026, 10, 12, 9));
+    expect(reloaded.decimalHours, isTrue);
+    expect(reloaded.rounding, Rounding.day);
+    expect(jsonDecode(storage.data!)['version'], 1);
+  });
+
+  test('recent tasks: distinct notes, newest first, 28-day window', () {
+    final a = store.addClient('Acme');
+    void work(String note, Duration length) {
+      store.toggle(a.id);
+      store.setNote(store.running!, note);
+      t = t.add(length);
+      store.stop();
+    }
+
+    work('Old audit', const Duration(hours: 1));
+    t = t.add(const Duration(days: 20));
+    work('Workshop', const Duration(hours: 1));
+    work('Report', const Duration(hours: 1));
+    work('Workshop', const Duration(hours: 1));
+    store.toggle(a.id); // running, no note: not a task
+    store.setNote(store.running!, 'Typing in progress');
+
+    expect(store.recentTasks(t)[a.id], ['Workshop', 'Report', 'Old audit']);
+    t = t.add(const Duration(minutes: 5));
+    store.stop();
+
+    // Old audit last ended 28 days + a bit ago.
+    t = t.add(const Duration(days: 8, hours: 1));
+    expect(store.recentTasks(t)[a.id], [
+      'Typing in progress',
+      'Workshop',
+      'Report',
+    ]);
+  });
+
+  test('resuming a task starts it with its note; tapping again stops', () {
+    final a = store.addClient('Acme');
+    final b = store.addClient('Globex');
+    store.toggle(b.id);
+    t = t.add(const Duration(hours: 1));
+
+    final e = store.toggle(a.id, note: 'Workshop');
+    expect(e?.note, 'Workshop');
+    expect(store.running?.clientId, a.id);
+
+    t = t.add(const Duration(hours: 1));
+    store.toggle(a.id, note: 'Report'); // switch tasks within a client
+    expect(store.running?.note, 'Report');
+
+    t = t.add(const Duration(hours: 1));
+    expect(store.toggle(a.id, note: 'Report'), isNull);
+    expect(store.running, isNull);
+    expect(
+      store.taskTotalIn(a.id, 'Workshop', DateTime(2026), DateTime(2027), t),
+      const Duration(hours: 1),
+    );
+  });
+
+  test('corrupt data does not crash load', () async {
+    storage.data = '{not json';
+    await store.load();
+    expect(store.loadError, isNotNull);
+    expect(store.clients, isEmpty);
+  });
+}
