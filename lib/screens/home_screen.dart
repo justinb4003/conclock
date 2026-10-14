@@ -29,6 +29,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _index = 0;
+  AppStore? _store;
 
   @override
   void initState() {
@@ -37,6 +38,29 @@ class _HomeScreenState extends State<HomeScreen> {
       final error = StoreScope.read(context).loadError;
       if (error != null && mounted) toast(context, error);
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final store = StoreScope.read(context);
+    if (store != _store) {
+      _store?.removeListener(_showNotice);
+      _store = store..addListener(_showNotice);
+    }
+  }
+
+  @override
+  void dispose() {
+    _store?.removeListener(_showNotice);
+    super.dispose();
+  }
+
+  /// One-off messages from the store (e.g. edits set aside after another
+  /// instance saved first).
+  void _showNotice() {
+    final notice = _store?.takeNotice();
+    if (notice != null && mounted) toast(context, notice);
   }
 
   Widget get _page => switch (_index) {

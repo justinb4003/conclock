@@ -96,6 +96,9 @@ class _IndexedDbStorage extends DataStorage {
   @override
   Future<void> keepCopy(String tag, String? data) async {
     final v = data ?? await _get(_key);
-    if (v != null) await _put('$_key.$tag', v);
+    if (v == null) return;
+    // Timestamped like the desktop's files, so copies don't overwrite each
+    // other.
+    await _put('$_key.$tag-${DateTime.now().millisecondsSinceEpoch}', v);
   }
 }

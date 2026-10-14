@@ -171,6 +171,39 @@ void main() {
     expect(store.clients.single.name, 'From other tab');
   });
 
+  test('unsaved edits are set aside when another tab saves first', () async {
+    await store.load();
+    store.addClient('Mine, not yet saved');
+    final other = AppStore(storage: MemoryStorage())..addClient('Theirs');
+    var notified = false;
+    store.addListener(() => notified = true);
+
+    storage.onChange!(jsonEncode(other.toJson()));
+    expect(store.clients.single.name, 'Theirs');
+    expect(storage.copies['unsaved'], contains('Mine, not yet saved'));
+    expect(notified, isTrue);
+    expect(store.takeNotice(), contains('set aside'));
+    expect(store.takeNotice(), isNull); // shown once
+
+    // Nothing pending: the adopted data is left alone.
+    await store.flush();
+    expect(storage.data, isNull);
+  });
+
+  test('recent tasks include a long entry that ended inside the window', () {
+    final a = store.addClient('Acme');
+    store.addEntry(
+      Entry(
+        id: 'weekend',
+        clientId: a.id,
+        start: t.subtract(const Duration(days: 40)),
+        end: t.subtract(const Duration(days: 10)),
+        note: 'Left running',
+      ),
+    );
+    expect(store.recentTasks(t)[a.id], ['Left running']);
+  });
+
   test('export then import round-trips and keeps a pre-import copy', () async {
     final a = store.addClient('Acme');
     store.toggle(a.id, note: 'Design');

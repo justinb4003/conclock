@@ -107,9 +107,18 @@ class FileStorage extends DataStorage {
   Future<void> write(String data) async {
     final f = await _getFile();
     _last = data;
-    final tmp = File('${f.path}.tmp');
-    await tmp.writeAsString(data, flush: true);
-    await tmp.rename(f.path);
+    // Named per process: another instance pointed at the same (synced)
+    // folder must not write into the same temp file.
+    final tmp = File('${f.path}.$pid.tmp');
+    try {
+      await tmp.writeAsString(data, flush: true);
+      await tmp.rename(f.path);
+    } catch (_) {
+      try {
+        await tmp.delete();
+      } catch (_) {}
+      rethrow;
+    }
   }
 
   /// Another copy of the app (or a sync tool) saved the file: hand over its

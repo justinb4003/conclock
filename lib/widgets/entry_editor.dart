@@ -205,6 +205,9 @@ class _EntryEditorState extends State<_EntryEditor> {
       for (final c in store.clients)
         if (!c.archived || c.id == _clientId) c,
     ];
+    // The client may be gone (e.g. an imported backup's entry); the entry
+    // keeps its id until another client is picked, so list it as unknown.
+    final orphan = !clients.any((c) => c.id == _clientId);
     final now = store.now();
     final duration = _running
         ? now.difference(_start)
@@ -232,24 +235,18 @@ class _EntryEditorState extends State<_EntryEditor> {
                 isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Client'),
                 items: [
+                  if (orphan)
+                    DropdownMenuItem(
+                      value: _clientId,
+                      child: _ClientLabel(
+                        color: clientPalette.last,
+                        name: 'Unknown client',
+                      ),
+                    ),
                   for (final c in clients)
                     DropdownMenuItem(
                       value: c.id,
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 6,
-                            backgroundColor: Color(c.color),
-                          ),
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: Text(
-                              c.name,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
+                      child: _ClientLabel(color: c.color, name: c.name),
                     ),
                 ],
                 onChanged: (v) => setState(() => _clientId = v!),
@@ -376,6 +373,23 @@ class _EntryEditorState extends State<_EntryEditor> {
       ],
     );
   }
+}
+
+/// Color dot and name, as listed in the client dropdown.
+class _ClientLabel extends StatelessWidget {
+  const _ClientLabel({required this.color, required this.name});
+
+  final int color;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      CircleAvatar(radius: 6, backgroundColor: Color(color)),
+      const SizedBox(width: 10),
+      Flexible(child: Text(name, overflow: TextOverflow.ellipsis)),
+    ],
+  );
 }
 
 class _FieldButton extends StatelessWidget {

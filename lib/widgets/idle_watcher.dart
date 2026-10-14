@@ -99,7 +99,7 @@ class _IdleWatcherState extends State<IdleWatcher> {
       }
     } finally {
       _asking = false;
-      _lastTick = StoreScope.read(context).now();
+      if (mounted) _lastTick = StoreScope.read(context).now();
     }
   }
 

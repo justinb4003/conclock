@@ -30,6 +30,17 @@ class AppStore extends ChangeNotifier {
   /// Why the last save failed (e.g. storage full), until one succeeds.
   String? saveError;
 
+  /// Something the user should hear once (shown as a toast), e.g. that
+  /// edits were set aside because another instance saved first.
+  String? _notice;
+
+  /// The pending notice, if any; clears it.
+  String? takeNotice() {
+    final n = _notice;
+    _notice = null;
+    return n;
+  }
+
   /// Log shows durations as decimal hours (1.50) instead of h:mm.
   bool decimalHours = false;
 
@@ -111,8 +122,21 @@ class AppStore extends ChangeNotifier {
     // Another browser tab saved: adopt its data so we don't overwrite it.
     _storage.watch((raw) {
       try {
+        final unsaved = _dirty ? jsonEncode(toJson()) : null;
         _apply(raw);
         _dirty = false;
+        _saveTimer?.cancel();
+        _saveTimer = null;
+        if (unsaved != null) {
+          // Edits made here moments ago lose to the other writer; keep them
+          // on the side rather than dropping them silently.
+          _notice =
+              'Your data changed elsewhere while you had unsaved edits here. '
+              'Those edits were set aside as a backup copy.';
+          _storage.keepCopy('unsaved', unsaved).catchError((Object e) {
+            debugPrint('ConClock: could not keep unsaved copy: $e');
+          });
+        }
         notifyListeners();
       } catch (e) {
         debugPrint('ConClock: ignoring unreadable external change: $e');
@@ -291,13 +315,15 @@ class AppStore extends ChangeNotifier {
 
   /// Distinct task names (notes) per client from finished entries that ended
   /// within [recentTaskWindow], most recently started first.
+  ///
+  /// Looks at every entry: one can start long before the window and still
+  /// end inside it (a timer left running over a weekend, a long manual
+  /// entry), and the scan is a few comparisons per entry.
   Map<String, List<String>> recentTasks(DateTime now) {
     final cutoff = now.subtract(recentTaskWindow);
     final tasks = <String, List<String>>{};
     final seen = <String, Set<String>>{};
     for (final e in entries) {
-      // Sorted by start; nothing older can still end inside the window.
-      if (e.start.isBefore(cutoff.subtract(const Duration(days: 2)))) break;
       final end = e.end;
       final note = e.note.trim();
       if (end == null || end.isBefore(cutoff) || note.isEmpty) continue;

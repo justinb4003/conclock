@@ -7,11 +7,36 @@ import 'package:flutter_test/flutter_test.dart';
 import 'store_test.dart' show MemoryStorage;
 
 void main() {
-  testWidgets('end day can be moved back and forth', (tester) async {
-    final store = AppStore(
+  late AppStore store;
+
+  setUp(() {
+    store = AppStore(
       storage: MemoryStorage(),
       clock: () => DateTime(2026, 10, 14, 12),
     );
+  });
+
+  /// A button that opens the editor on entry [id].
+  Future<void> open(WidgetTester tester, String id) async {
+    await tester.pumpWidget(
+      StoreScope(
+        store: store,
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () =>
+                  showEntryEditor(context, entry: store.entryById(id)),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('end day can be moved back and forth', (tester) async {
     final acme = store.addClient('Acme');
     // A timer left running overnight: 9:00 to 10:00 the next day.
     store.addEntry(
@@ -22,22 +47,7 @@ void main() {
         end: DateTime(2026, 10, 13, 10),
       ),
     );
-    await tester.pumpWidget(
-      StoreScope(
-        store: store,
-        child: MaterialApp(
-          home: Builder(
-            builder: (context) => TextButton(
-              onPressed: () =>
-                  showEntryEditor(context, entry: store.entryById('e1')),
-              child: const Text('open'),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
+    await open(tester, 'e1');
     expect(find.textContaining('(+1d)'), findsOneWidget);
     expect(find.text('Duration 25:00'), findsOneWidget);
 
@@ -60,5 +70,28 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(store.entryById('e1')!.end, DateTime(2026, 10, 12, 10));
+  });
+
+  testWidgets('an entry whose client is gone still opens and saves', (
+    tester,
+  ) async {
+    store.addClient('Acme');
+    // E.g. from an imported backup whose client list doesn't match.
+    store.addEntry(
+      Entry(
+        id: 'orphan',
+        clientId: 'deleted-client',
+        start: DateTime(2026, 10, 12, 9),
+        end: DateTime(2026, 10, 12, 10),
+        note: 'Old work',
+      ),
+    );
+    await open(tester, 'orphan');
+    expect(tester.takeException(), isNull);
+    expect(find.text('Unknown client'), findsOneWidget);
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(store.entryById('orphan')!.clientId, 'deleted-client');
   });
 }

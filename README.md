@@ -31,7 +31,9 @@ Stopping or switching away from an entry with no note asks for a task name
 - Desktop / mobile: `conclock.json` in the app-support directory
   (Linux: `~/.local/share/com.conclock.conclock/`). Shown under Settings → Data location.
   Writes are atomic (temp file + rename); unreadable files are kept as
-  `conclock.json.corrupt-<timestamp>`.
+  `conclock.json.corrupt-<timestamp>`. If the file changes elsewhere (another
+  instance, a sync) while you have unsaved edits, those are kept as
+  `conclock.json.unsaved-<timestamp>` and a message says so.
 - Web: the browser's IndexedDB (database `conclock`), which holds years of
   entries; data from older versions in `localStorage` moves over on first
   load.
