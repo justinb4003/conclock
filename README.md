@@ -32,3 +32,15 @@ flutter build web
 flutter test
 python3 tool/seed_test_data.py   # 4 weeks of 9-5 test data (--remove to undo)
 ```
+
+## Releases
+
+GitHub Actions (`.github/workflows/build.yml`) tests and builds on every push:
+Linux x64 (`.tar.gz` and `.deb`) and Windows x64 (`.zip`) as workflow
+artifacts. Push a `v*` tag (e.g. `git tag v1.0.0 && git push --tags`) to
+publish them as a GitHub release.
+
+```sh
+sudo apt install ./conclock_1.0.0_amd64.deb   # installs to /opt/conclock
+tool/package_deb.sh                             # build the .deb locally
+```
