@@ -7,6 +7,7 @@ import '../store.dart';
 import '../tracking.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/live_builder.dart';
+import '../widgets/quick_switch.dart';
 import '../widgets/task_menu.dart';
 
 /// Tap a client to start it; tap again (or another) to stop / switch.
@@ -157,6 +158,11 @@ class _TrackerScreenState extends State<TrackerScreen> {
       appBar: AppBar(
         title: const Text('ConClock'),
         actions: [
+          IconButton(
+            tooltip: 'Quick switch (${modKey}K)',
+            onPressed: () => showQuickSwitch(context),
+            icon: const Icon(Icons.search),
+          ),
           IconButton(
             tooltip: 'Add client',
             onPressed: () => showAddClient(context),
@@ -323,7 +329,7 @@ class _StatusPanel extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       IconButton.filledTonal(
-                        tooltip: 'Stop',
+                        tooltip: 'Stop ($modKey.)',
                         onPressed: onStop,
                         icon: const Icon(Icons.stop),
                       ),

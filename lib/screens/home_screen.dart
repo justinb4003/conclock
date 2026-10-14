@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../store.dart';
+import '../widgets/app_shortcuts.dart';
 import '../widgets/dialogs.dart';
 import 'clients_screen.dart';
 import 'log_screen.dart';
@@ -45,6 +46,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return AppShortcuts(child: _layout(context));
+  }
+
+  Widget _layout(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 720;
     if (wide) {
       return Scaffold(
