@@ -142,17 +142,25 @@ jobs:
           channel: stable
           cache: true
       - run: flutter build windows --release
-      - name: Package zip
+      - name: Build installer
         shell: pwsh
         run: |
           $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([^+\s]+)').Matches[0].Groups[1].Value
-          $release = 'build\windows\x64\runner\Release'
+          $release = Resolve-Path 'build\windows\x64\runner\Release'
           # Bundle the MSVC runtime so it runs on machines without it.
           foreach ($dll in 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll') {
             Copy-Item "$env:WINDIR\System32\$dll" $release
           }
+          function Find-Iscc {
+            Get-ChildItem "${env:ProgramFiles(x86)}\Inno Setup*\ISCC.exe", "$env:ProgramFiles\Inno Setup*\ISCC.exe" -ErrorAction SilentlyContinue |
+              Select-Object -First 1 -ExpandProperty FullName
+          }
+          $iscc = Find-Iscc
+          if (-not $iscc) { choco install innosetup -y --no-progress; $iscc = Find-Iscc }
           New-Item -ItemType Directory -Force dist | Out-Null
-          Compress-Archive -Path "$release\*" -DestinationPath "dist\conclock-$version-windows-x64.zip"
+          $out = Resolve-Path dist
+          & $iscc "/DAppVersion=$version" "/DSourceDir=$release" "/DOutputDir=$out" windows\installer\conclock.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Get-ChildItem dist
       - uses: actions/upload-artifact@v4
         with:

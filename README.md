@@ -49,16 +49,23 @@ python3 tool/seed_test_data.py   # 4 weeks of 9-5 test data (--remove to undo)
 ## Releases
 
 GitHub Actions (`.github/workflows/build.yml`) tests and builds on every push:
-Linux x64 and arm64 (`.tar.gz` and `.deb`), Windows x64 (`.zip`), macOS
+Linux x64 and arm64 (`.tar.gz` and `.deb`), Windows x64 (setup `.exe`), macOS
 universal (`.dmg`) and Android (`.apk`) as workflow artifacts. Pushes to `main` also deploy the web app to GitHub Pages:
 https://justinb4003.github.io/conclock/ (data stays in your browser; open
-tabs stay in sync). Push a `v*` tag (e.g. `git tag v0.3.0 && git push --tags`) to
+tabs stay in sync). Push a `v*` tag (e.g. `git tag v0.3.1 && git push --tags`) to
 publish them as a GitHub release.
 
 ```sh
-sudo apt install ./conclock_0.3.0_amd64.deb   # installs to /opt/conclock
+sudo apt install ./conclock_0.3.1_amd64.deb   # installs to /opt/conclock
 tool/package_deb.sh                             # build the .deb locally
 ```
+
+Windows: run `conclock-<version>-windows-x64-setup.exe`. It installs for the
+current user (no admin prompt), adds a Start menu entry and optionally a
+desktop shortcut and start-at-sign-in; installing a newer version upgrades in
+place, and uninstalling keeps your data. The installer isn't code-signed, so
+SmartScreen warns on first run: *More info → Run anyway*. The installer script
+is `windows/installer/conclock.iss` (Inno Setup).
 
 The macOS build is ad-hoc signed but not notarized (that needs a paid Apple
 Developer account), so the first launch is blocked: drag ConClock to
