@@ -23,6 +23,10 @@ class _TrackerScreenState extends State<TrackerScreen> {
   AppStore? _store;
   String? _noteEntryId;
 
+  /// Tasks shown per client before "N more". Static so it survives tabs.
+  static const _taskCap = 3;
+  static final _showAllTasks = <String>{};
+
   /// On phones, popping the keyboard on every switch is more annoying than
   /// helpful; on desktop/web it makes "click client, type note" instant.
   /// (On the web this reflects the device, so phone browsers count as phones.)
@@ -84,6 +88,16 @@ class _TrackerScreenState extends State<TrackerScreen> {
         (_) => _noteFocus.requestFocus(),
       );
     }
+  }
+
+  /// The most recent tasks (all, if expanded), plus the running one.
+  List<String> _visibleTasks(String clientId, List<String> all, String? run) {
+    if (_showAllTasks.contains(clientId) || all.length <= _taskCap) return all;
+    final shown = all.take(_taskCap).toList();
+    if (run != null && all.contains(run) && !shown.contains(run)) {
+      shown.add(run);
+    }
+    return shown;
   }
 
   /// A client row, or a task row under it when [task] is set. Shows today's
@@ -199,7 +213,11 @@ class _TrackerScreenState extends State<TrackerScreen> {
                           now,
                           totals[c.id],
                         ),
-                        for (final task in tasks[c.id] ?? const <String>[])
+                        for (final task in _visibleTasks(
+                          c.id,
+                          tasks[c.id] ?? const [],
+                          running?.clientId == c.id ? runningTask : null,
+                        ))
                           _row(
                             store,
                             c,
@@ -208,6 +226,16 @@ class _TrackerScreenState extends State<TrackerScreen> {
                             today,
                             now,
                             null,
+                          ),
+                        if ((tasks[c.id]?.length ?? 0) > _taskCap)
+                          _MoreTasks(
+                            showingAll: _showAllTasks.contains(c.id),
+                            hidden: tasks[c.id]!.length - _taskCap,
+                            onTap: () => setState(() {
+                              if (!_showAllTasks.remove(c.id)) {
+                                _showAllTasks.add(c.id);
+                              }
+                            }),
                           ),
                       ],
                     ],
@@ -402,4 +430,34 @@ class _TrackRow extends StatelessWidget {
           : Text(total == Duration.zero ? '' : fmtHm(total!), style: style),
     );
   }
+}
+
+/// "N more" / "Show less" under a client's tasks.
+class _MoreTasks extends StatelessWidget {
+  const _MoreTasks({
+    required this.showingAll,
+    required this.hidden,
+    required this.onTap,
+  });
+
+  final bool showingAll;
+  final int hidden;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.centerLeft,
+    child: Padding(
+      padding: const EdgeInsets.only(left: 52),
+      child: TextButton.icon(
+        onPressed: onTap,
+        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+        icon: Icon(
+          showingAll ? Icons.expand_less : Icons.expand_more,
+          size: 18,
+        ),
+        label: Text(showingAll ? 'Show less' : '$hidden more'),
+      ),
+    ),
+  );
 }
