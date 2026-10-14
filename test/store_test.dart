@@ -261,6 +261,20 @@ void main() {
     expect(store.running!.note, 'Other');
   });
 
+  test('finds overlapping entries', () {
+    final a = store.addClient('Acme');
+    store.toggle(a.id, note: 'Morning'); // 9:00-10:00
+    t = t.add(const Duration(hours: 1));
+    store.stop();
+    DateTime at(int h, [int m = 0]) => DateTime(2026, 10, 12, h, m);
+
+    expect(store.overlapping(at(9, 30), at(11)).single.note, 'Morning');
+    expect(store.overlapping(at(10), at(11)), isEmpty); // touching is fine
+    expect(store.overlapping(at(8), at(9)), isEmpty);
+    final morning = store.entries.single;
+    expect(store.overlapping(at(9), at(10), exceptId: morning.id), isEmpty);
+  });
+
   test('corrupt data does not crash load', () async {
     storage.data = '{not json';
     await store.load();

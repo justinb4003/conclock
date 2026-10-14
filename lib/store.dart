@@ -182,6 +182,23 @@ class AppStore extends ChangeNotifier {
     return null;
   }
 
+  /// Entries whose time overlaps [start, end), other than [exceptId].
+  List<Entry> overlapping(
+    DateTime start,
+    DateTime end, {
+    String? exceptId,
+    DateTime? now,
+  }) {
+    final t = now ?? this.now();
+    return [
+      for (final e in entries)
+        if (e.id != exceptId &&
+            e.start.isBefore(end) &&
+            (e.end ?? t).isAfter(start))
+          e,
+    ];
+  }
+
   /// Sorts client ids into the user's client order (unknown ids last).
   List<String> inClientOrder(Iterable<String> ids) {
     final rank = {for (var i = 0; i < clients.length; i++) clients[i].id: i};

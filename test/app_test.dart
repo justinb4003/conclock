@@ -95,6 +95,8 @@ void main() {
     await tester.tap(find.byTooltip('Add time'));
     await tester.pumpAndSettle();
     expect(find.text('Add time'), findsWidgets);
+    // The default last hour overlaps what was tracked above.
+    expect(find.textContaining('Overlaps'), findsOneWidget);
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 

@@ -187,6 +187,12 @@ class _EntryEditorState extends State<_EntryEditor> {
         : _end!.difference(_start);
     final nextDay = !_running && dayStart(_end!) != dayStart(_start);
     final error = _error;
+    final overlaps = store.overlapping(
+      _start,
+      _running ? now : _end!,
+      exceptId: widget.entry?.id,
+      now: now,
+    );
 
     return AlertDialog(
       title: Text(widget.entry == null ? 'Add time' : 'Edit time'),
@@ -272,6 +278,10 @@ class _EntryEditorState extends State<_EntryEditor> {
                 minLines: 2,
                 maxLines: 5,
               ),
+              if (overlaps.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _OverlapWarning(overlaps: overlaps),
+              ],
               if (error != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -332,6 +342,40 @@ class _FieldButton extends StatelessWidget {
         ),
         child: Text(value),
       ),
+    );
+  }
+}
+
+/// Non-blocking note that this entry overlaps others (double billing?).
+class _OverlapWarning extends StatelessWidget {
+  const _OverlapWarning({required this.overlaps});
+
+  final List<Entry> overlaps;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.read(context);
+    final color = Theme.of(context).colorScheme.tertiary;
+    String describe(Entry e) =>
+        '${store.clientById(e.clientId)?.name ?? 'Unknown'} '
+        '${fmtTime(context, e.start)} – '
+        '${e.isRunning ? 'now' : fmtTime(context, e.end!)}';
+    final shown = overlaps.take(2).map(describe).join(', ');
+    final more = overlaps.length > 2 ? ' and ${overlaps.length - 2} more' : '';
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.warning_amber_rounded, size: 18, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            'Overlaps $shown$more',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: color),
+          ),
+        ),
+      ],
     );
   }
 }
