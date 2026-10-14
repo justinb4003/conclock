@@ -14,4 +14,24 @@ abstract class DataStorage {
   /// Calls [onChange] when another instance (e.g. a second browser tab)
   /// saves. No-op where that can't happen.
   void watch(void Function(String data) onChange) {}
+
+  /// Whether the data can live in a folder the user picks (desktop).
+  bool get canRelocate => false;
+
+  /// Whether data is in the default place rather than a chosen folder.
+  bool get isDefaultLocation => folder == null;
+
+  /// The folder the user chose for their data, or null for the default.
+  String? get folder => null;
+
+  /// Something the user should know about where data is (e.g. their chosen
+  /// folder is missing), found while reading.
+  String? get warning => null;
+
+  /// Whether [dir] already holds ConClock data.
+  Future<bool> hasDataAt(String dir) async => false;
+
+  /// From now on read/write data in [dir] (null: the default place).
+  /// Doesn't move anything; the caller decides what to write or read.
+  Future<void> relocate(String? dir) async {}
 }

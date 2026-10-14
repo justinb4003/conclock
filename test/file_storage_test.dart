@@ -11,9 +11,8 @@ void main() {
   tearDown(() => dir.deleteSync(recursive: true));
 
   test('a second app instance adopts the other one\'s saves', () async {
-    final file = File('${dir.path}/conclock.json');
-    final a = AppStore(storage: FileStorage(file: file));
-    final b = AppStore(storage: FileStorage(file: file));
+    final a = AppStore(storage: FileStorage(supportDir: dir));
+    final b = AppStore(storage: FileStorage(supportDir: dir));
     await a.load();
     await b.load();
 
@@ -28,5 +27,77 @@ void main() {
     expect(identical(a.clients.single, client), isTrue);
     a.dispose();
     b.dispose();
+  });
+
+  group('data folder', () {
+    late Directory synced;
+    setUp(() => synced = Directory('${dir.path}/synced')..createSync());
+
+    test('move here, then reopen from there', () async {
+      final store = AppStore(storage: FileStorage(supportDir: dir));
+      await store.load();
+      store.addClient('Acme');
+      await store.moveDataTo(synced.path, useExisting: false);
+      expect(File('${synced.path}/conclock.json').existsSync(), isTrue);
+      expect(store.dataInDefaultFolder, isFalse);
+
+      final reopened = AppStore(storage: FileStorage(supportDir: dir));
+      await reopened.load();
+      expect(reopened.storageLocation, startsWith(synced.path));
+      expect(reopened.clients.single.name, 'Acme');
+      store.dispose();
+      reopened.dispose();
+    });
+
+    test('use the data already there; ours is kept as a copy', () async {
+      final other = AppStore(
+        storage: FileStorage(supportDir: Directory('${dir.path}/other')),
+      );
+      await other.load();
+      other.addClient('From laptop');
+      await other.moveDataTo(synced.path, useExisting: false);
+
+      final store = AppStore(storage: FileStorage(supportDir: dir));
+      await store.load();
+      store.addClient('From desktop');
+      await store.flush();
+      expect(await store.hasDataIn(synced.path), isTrue);
+      await store.moveDataTo(synced.path, useExisting: true);
+      expect(store.clients.single.name, 'From laptop');
+      expect(
+        dir.listSync().any((f) => f.path.contains('before-switch')),
+        isTrue,
+      );
+      other.dispose();
+      store.dispose();
+    });
+
+    test('unreadable data there: stays put', () async {
+      File('${synced.path}/conclock.json').writeAsStringSync('{broken');
+      final store = AppStore(storage: FileStorage(supportDir: dir));
+      await store.load();
+      store.addClient('Keep');
+      await expectLater(
+        store.moveDataTo(synced.path, useExisting: true),
+        throwsA(anything),
+      );
+      expect(store.dataInDefaultFolder, isTrue);
+      expect(store.clients.single.name, 'Keep');
+      store.dispose();
+    });
+
+    test('a missing chosen folder falls back with a warning', () async {
+      final store = AppStore(storage: FileStorage(supportDir: dir));
+      await store.load();
+      await store.moveDataTo(synced.path, useExisting: false);
+      store.dispose();
+      synced.deleteSync(recursive: true);
+
+      final reopened = AppStore(storage: FileStorage(supportDir: dir));
+      await reopened.load();
+      expect(reopened.dataInDefaultFolder, isTrue);
+      expect(reopened.loadError, contains('wasn’t found'));
+      reopened.dispose();
+    });
   });
 }

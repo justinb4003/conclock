@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../backup/backup.dart';
 import '../models.dart';
 import '../store.dart';
+import '../widgets/data_location.dart';
 import '../widgets/dialogs.dart';
 
 /// Add, rename, recolor, reorder, archive and delete clients.
@@ -34,25 +35,6 @@ class ClientsScreen extends StatelessWidget {
     toast(context, 'Deleted ${c.name}', undo: store.deleteClient(c));
   }
 
-  void _showDataLocation(BuildContext context) {
-    final store = StoreScope.read(context);
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Your data'),
-        content: SelectableText(
-          'Everything is stored locally as JSON:\n\n${store.storageLocation}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
@@ -69,7 +51,7 @@ class ClientsScreen extends StatelessWidget {
             onSelected: (v) => switch (v) {
               'export' => exportBackup(context),
               'import' => importBackup(context),
-              _ => _showDataLocation(context),
+              _ => showDataLocation(context),
             },
             itemBuilder: (context) => const [
               PopupMenuItem(

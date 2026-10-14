@@ -39,6 +39,41 @@ class AppStore extends ChangeNotifier {
 
   String get storageLocation => _storage.location;
 
+  bool get canChooseDataFolder => _storage.canRelocate;
+
+  bool get dataInDefaultFolder => _storage.isDefaultLocation;
+
+  Future<bool> hasDataIn(String dir) => _storage.hasDataAt(dir);
+
+  /// Keeps data in [dir] from now on (null: the default place). With
+  /// [useExisting], loads the data already there; otherwise writes ours
+  /// there. Either way the data being dropped is kept as a side copy.
+  Future<void> moveDataTo(String? dir, {required bool useExisting}) async {
+    final ours = jsonEncode(toJson());
+    await flush();
+    await _writing;
+    if (useExisting) {
+      final previous = _storage.folder;
+      await _storage.keepCopy('before-switch', ours);
+      await _storage.relocate(dir);
+      try {
+        final raw = await _storage.read();
+        if (raw != null) _apply(raw);
+      } catch (_) {
+        await _storage.relocate(previous); // unreadable: stay where we were
+        rethrow;
+      }
+      notifyListeners();
+    } else {
+      await _storage.relocate(dir);
+      if (await _storage.read() != null) {
+        await _storage.keepCopy('replaced', null);
+      }
+      _changed();
+      await flush();
+    }
+  }
+
   /// Current time truncated to whole seconds.
   DateTime now() {
     final t = _clock();
@@ -63,6 +98,7 @@ class AppStore extends ChangeNotifier {
         await _storage.keepCopy('corrupt', null);
       } catch (_) {}
     }
+    loadError ??= _storage.warning;
     // Another browser tab saved: adopt its data so we don't overwrite it.
     _storage.watch((raw) {
       try {
