@@ -389,11 +389,9 @@ class _Grid extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final todayCol = daysBetween(sheet.from, DateTime.now());
-    final numStyle = theme.textTheme.bodyMedium?.copyWith(
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
-    final bold = numStyle?.copyWith(fontWeight: FontWeight.w600);
-    final muted = numStyle?.copyWith(color: scheme.onSurfaceVariant);
+    final numStyle = timeStyle(context, theme.textTheme.bodyMedium);
+    final bold = numStyle.copyWith(fontWeight: FontWeight.w600);
+    final muted = numStyle.copyWith(color: scheme.onSurfaceVariant);
     final tipStyle = theme.textTheme.bodySmall?.copyWith(
       color: scheme.onInverseSurface,
       fontFeatures: const [FontFeature.tabularFigures()],
@@ -600,7 +598,7 @@ class _Grid extends StatelessWidget {
             days: sheet.dayTotals,
             total: sheet.total,
             style: bold,
-            totalStyle: bold?.copyWith(color: scheme.primary),
+            totalStyle: bold.copyWith(color: scheme.primary),
             label: Padding(
               padding: const EdgeInsets.only(left: 16),
               child: Align(

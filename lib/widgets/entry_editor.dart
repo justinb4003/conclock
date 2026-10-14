@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../format.dart';
 import '../models.dart';
 import '../store.dart';
+import 'common.dart';
 import 'dialogs.dart';
 
 /// Opens the editor for [entry], or for a new entry when null.
@@ -269,6 +270,7 @@ class _EntryEditorState extends State<_EntryEditor> {
                     child: _FieldButton(
                       label: 'Start',
                       value: fmtTime(context, _start),
+                      isTime: true,
                       icon: Icons.schedule,
                       onTap: _pickStart,
                     ),
@@ -277,6 +279,7 @@ class _EntryEditorState extends State<_EntryEditor> {
                   Expanded(
                     child: _FieldButton(
                       label: 'End',
+                      isTime: !_running,
                       value: _running
                           ? 'Running'
                           : fmtTime(context, _end!) +
@@ -291,8 +294,18 @@ class _EntryEditorState extends State<_EntryEditor> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      'Duration ${fmtHm(duration.isNegative ? Duration.zero : duration)}',
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          const TextSpan(text: 'Duration '),
+                          timeSpan(
+                            context,
+                            fmtHm(
+                              duration.isNegative ? Duration.zero : duration,
+                            ),
+                          ),
+                        ],
+                      ),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
@@ -371,12 +384,14 @@ class _FieldButton extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.onTap,
+    this.isTime = false,
   });
 
   final String label;
   final String value;
   final IconData icon;
   final VoidCallback? onTap;
+  final bool isTime;
 
   @override
   Widget build(BuildContext context) {
@@ -390,7 +405,7 @@ class _FieldButton extends StatelessWidget {
           suffixIcon: Icon(icon, size: 18),
           enabled: onTap != null,
         ),
-        child: Text(value),
+        child: Text(value, style: isTime ? timeStyle(context) : null),
       ),
     );
   }

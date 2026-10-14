@@ -11,11 +11,13 @@ one JSON file.
   copy the week as tab-separated decimal hours for a spreadsheet. Optional
   rounding up to ½ h, per task or per client-day.
 - **Clients** — add, rename, recolor, drag to reorder, archive, delete.
+- **Settings** — monospace font for times, decimal hours, tray behavior,
+  data location, export/import backups.
 
 Desktop: closing the window keeps ConClock running in the system tray (menu
 bar on macOS); the tray menu shows what's running and can stop, switch
-clients, reopen or quit. Turn it off under Clients → 💾 → "Keep running in
-tray when closed". Launching it again brings back the existing window.
+clients, reopen or quit. Turn it off under Settings → "Keep running in tray
+when closed". Launching it again brings back the existing window.
 
 🔍 on Track: type to find a client or task and start it. Right-click
 (long-press) a task to rename or merge it. Timers left
@@ -27,11 +29,11 @@ Stopping or switching away from an entry with no note asks for a task name
 ## Data
 
 - Desktop / mobile: `conclock.json` in the app-support directory
-  (Linux: `~/.local/share/com.conclock.conclock/`). Shown under Clients → ⓘ.
+  (Linux: `~/.local/share/com.conclock.conclock/`). Shown under Settings → Data location.
   Writes are atomic (temp file + rename); unreadable files are kept as
   `conclock.json.corrupt-<timestamp>`.
 - Web: browser `localStorage` (key `conclock.data`).
-- Desktop: Clients → Data location → *Choose folder…* moves data into any
+- Desktop: Settings → Data location → *Choose folder…* moves data into any
   folder, e.g. a synced one (Dropbox, OneDrive, Syncthing) to share it
   between computers. Changes from elsewhere are picked up live.
 

@@ -67,6 +67,17 @@ flutter:
     - assets/icon/tray.png
     - assets/icon/tray.ico
 
+  # Optional font for times (Settings); bundled so web and every desktop
+  # look the same. SIL Open Font License: assets/fonts/OFL.txt.
+  fonts:
+    - family: IBM Plex Mono
+      fonts:
+        - asset: assets/fonts/IBMPlexMono-Regular.ttf
+        - asset: assets/fonts/IBMPlexMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexMono-SemiBold.ttf
+          weight: 600
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

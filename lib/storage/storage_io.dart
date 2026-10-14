@@ -55,7 +55,7 @@ class FileStorage extends DataStorage {
     if (chosen != null && !await Directory(chosen).exists()) {
       _warning =
           'Your data folder ($chosen) wasn’t found, so ConClock is using '
-          'its default location. Pick the folder again under Clients → '
+          'its default location. Pick the folder again under Settings → '
           'Data location once it’s back.';
       chosen = null;
     }

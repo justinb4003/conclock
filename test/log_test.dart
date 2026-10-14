@@ -1,6 +1,5 @@
 import 'package:conclock/main.dart';
 import 'package:conclock/store.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'store_test.dart' show MemoryStorage;

@@ -217,8 +217,9 @@ class _Sum extends StatelessWidget {
             : fmtHours(d, decimal: decimal);
         return Text(
           text,
-          style: (style ?? DefaultTextStyle.of(context).style).copyWith(
-            fontFeatures: const [FontFeature.tabularFigures()],
+          style: timeStyle(
+            context,
+            style ?? DefaultTextStyle.of(context).style,
           ),
         );
       },
@@ -400,7 +401,7 @@ class _EntryRow extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(66, 6, 16, 6),
         child: Row(
           children: [
-            Expanded(child: Text(range, style: style)),
+            Expanded(child: Text(range, style: timeStyle(context, style))),
             Icon(Icons.edit_outlined, size: 14, color: style?.color),
             const SizedBox(width: 8),
             _Sum(entries: [e], decimal: decimal, style: style, seconds: true),

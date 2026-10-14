@@ -5,6 +5,7 @@ import '../format.dart';
 import '../models.dart';
 import '../store.dart';
 import '../tracking.dart';
+import '../widgets/common.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/live_builder.dart';
 import '../widgets/quick_switch.dart';
@@ -301,8 +302,13 @@ class _StatusPanel extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Text(
-                    'Today ${fmtHm(todayTotal(DateTime.now()))}',
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(text: 'Today '),
+                        timeSpan(context, fmtHm(todayTotal(DateTime.now()))),
+                      ],
+                    ),
                     style: theme.textTheme.bodyMedium,
                   ),
                 ],
@@ -322,8 +328,9 @@ class _StatusPanel extends StatelessWidget {
                       LiveBuilder(
                         builder: (context, now) => Text(
                           fmtClock(r.durationAt(now)),
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                          style: timeStyle(
+                            context,
+                            theme.textTheme.headlineSmall,
                           ),
                         ),
                       ),
@@ -354,8 +361,15 @@ class _StatusPanel extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   LiveBuilder(
-                    builder: (context, now) => Text(
-                      'Started ${fmtTime(context, r.start)} · Today ${fmtHm(todayTotal(now))}',
+                    builder: (context, now) => Text.rich(
+                      TextSpan(
+                        children: [
+                          const TextSpan(text: 'Started '),
+                          timeSpan(context, fmtTime(context, r.start)),
+                          const TextSpan(text: ' · Today '),
+                          timeSpan(context, fmtHm(todayTotal(now))),
+                        ],
+                      ),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -391,8 +405,7 @@ class _TrackRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final style = theme.textTheme.bodyMedium?.copyWith(
-      fontFeatures: const [FontFeature.tabularFigures()],
+    final style = timeStyle(context, theme.textTheme.bodyMedium).copyWith(
       color: running ? null : theme.colorScheme.onSurfaceVariant,
       fontWeight: running ? FontWeight.w600 : null,
     );

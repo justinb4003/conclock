@@ -39,3 +39,20 @@ class Chevron extends StatelessWidget {
     ),
   );
 }
+
+/// Font for times when Settings → "Monospace times" is on (bundled asset).
+const monoFont = 'IBM Plex Mono';
+
+/// [base] for a time or duration: digits all the same width, and the
+/// monospace font when that setting is on.
+TextStyle timeStyle(BuildContext context, [TextStyle? base]) {
+  final mono = StoreScope.of(context).monoTimes;
+  return (base ?? const TextStyle()).copyWith(
+    fontFamily: mono ? monoFont : null,
+    fontFeatures: const [FontFeature.tabularFigures()],
+  );
+}
+
+/// A time or duration inside running text, e.g. 'Today ' + timeSpan(…).
+TextSpan timeSpan(BuildContext context, String text) =>
+    TextSpan(text: text, style: timeStyle(context));

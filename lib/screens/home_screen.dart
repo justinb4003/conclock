@@ -6,6 +6,7 @@ import '../widgets/dialogs.dart';
 import '../widgets/idle_watcher.dart';
 import 'clients_screen.dart';
 import 'log_screen.dart';
+import 'settings_screen.dart';
 import 'timesheet_screen.dart';
 import 'tracker_screen.dart';
 
@@ -14,6 +15,7 @@ const _destinations = [
   (Icons.list_alt_outlined, Icons.list_alt, 'Log'),
   (Icons.grid_on_outlined, Icons.grid_on, 'Timesheet'),
   (Icons.people_outline, Icons.people, 'Clients'),
+  (Icons.settings_outlined, Icons.settings, 'Settings'),
 ];
 
 /// Bottom navigation on narrow screens, a rail on wide ones.
@@ -40,7 +42,8 @@ class _HomeScreenState extends State<HomeScreen> {
     0 => const TrackerScreen(),
     1 => const LogScreen(),
     2 => const TimesheetScreen(),
-    _ => const ClientsScreen(),
+    3 => const ClientsScreen(),
+    _ => const SettingsScreen(),
   };
 
   void _select(int i) => setState(() => _index = i);

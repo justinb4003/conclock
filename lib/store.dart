@@ -36,6 +36,9 @@ class AppStore extends ChangeNotifier {
   /// Desktop: closing the window hides it to the tray instead of quitting.
   bool closeToTray = true;
 
+  /// Show times and durations in a monospace font.
+  bool monoTimes = false;
+
   Timer? _saveTimer;
   bool _dirty = false;
   Future<void> _writing = Future.value();
@@ -141,6 +144,7 @@ class AppStore extends ChangeNotifier {
     rounding =
         Rounding.values.asNameMap()[settings['rounding']] ?? Rounding.off;
     closeToTray = settings['closeToTray'] as bool? ?? true;
+    monoTimes = settings['monoTimes'] as bool? ?? false;
   }
 
   // ------------------------------------------------------------- backups
@@ -168,6 +172,7 @@ class AppStore extends ChangeNotifier {
       'decimalHours': decimalHours,
       'rounding': rounding.name,
       'closeToTray': closeToTray,
+      'monoTimes': monoTimes,
     },
     'clients': [for (final c in clients) c.toJson()],
     'entries': [for (final e in entries) e.toJson()],
@@ -316,6 +321,12 @@ class AppStore extends ChangeNotifier {
   void setCloseToTray(bool v) {
     if (closeToTray == v) return;
     closeToTray = v;
+    _changed();
+  }
+
+  void setMonoTimes(bool v) {
+    if (monoTimes == v) return;
+    monoTimes = v;
     _changed();
   }
 

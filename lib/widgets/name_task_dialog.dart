@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../format.dart';
 import '../models.dart';
 import '../store.dart';
+import 'common.dart';
 
 enum StopChoice { named, unnamed, discard }
 
@@ -79,9 +80,15 @@ class _NameTaskDialogState extends State<_NameTaskDialog> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    '${client?.name ?? 'Unknown'} · '
-                    '${fmtTime(context, e.start)} · ${fmtHm(e.durationAt(now))}',
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: '${client?.name ?? 'Unknown'} · '),
+                        timeSpan(context, fmtTime(context, e.start)),
+                        const TextSpan(text: ' · '),
+                        timeSpan(context, fmtHm(e.durationAt(now))),
+                      ],
+                    ),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
