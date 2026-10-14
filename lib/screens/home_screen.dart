@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../backup/backup.dart';
 import '../desktop/desktop.dart';
 import '../store.dart';
 import '../widgets/dialogs.dart';
@@ -53,6 +54,18 @@ class _HomeScreenState extends State<HomeScreen> {
     return IdleWatcher(child: TrayShell(child: _layout(context)));
   }
 
+  /// The current tab, under a warning while saving fails.
+  Widget _body(BuildContext context) {
+    final error = StoreScope.of(context).saveError;
+    if (error == null) return _page;
+    return Column(
+      children: [
+        _SaveErrorBanner(error: error),
+        Expanded(child: _page),
+      ],
+    );
+  }
+
   Widget _layout(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 720;
     if (wide) {
@@ -73,13 +86,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const VerticalDivider(width: 1),
-            Expanded(child: _page),
+            Expanded(child: _body(context)),
           ],
         ),
       );
     }
     return Scaffold(
-      body: _page,
+      body: _body(context),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: _select,
@@ -92,6 +105,48 @@ class _HomeScreenState extends State<HomeScreen> {
               label: label,
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Shown while saves fail: changes since are only in memory.
+class _SaveErrorBanner extends StatelessWidget {
+  const _SaveErrorBanner({required this.error});
+
+  final String error;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.errorContainer,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline, color: scheme.onErrorContainer),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Couldn’t save your changes ($error). Export a backup '
+                  'before closing ConClock.',
+                  style: TextStyle(color: scheme.onErrorContainer),
+                ),
+              ),
+              TextButton(
+                onPressed: () => exportBackup(context),
+                child: const Text('Export'),
+              ),
+              TextButton(
+                onPressed: StoreScope.read(context).flush,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

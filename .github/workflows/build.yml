@@ -23,6 +23,8 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      # Browser storage (IndexedDB) runs in the runner's Chrome.
+      - run: flutter test --platform chrome test/web
 
   linux:
     needs: test

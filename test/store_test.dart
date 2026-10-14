@@ -282,4 +282,58 @@ void main() {
     expect(storage.copies.containsKey('corrupt'), isTrue);
     expect(store.clients, isEmpty);
   });
+
+  test('range lookups stay sorted with a later manual entry', () {
+    var t = DateTime(2026, 10, 12, 9);
+    final store = AppStore(storage: MemoryStorage(), clock: () => t);
+    final c = store.addClient('Acme');
+    // Entered by hand for tomorrow, then a timer started today.
+    store.addEntry(
+      Entry(
+        id: 'tomorrow',
+        clientId: c.id,
+        start: DateTime(2026, 10, 13, 9),
+        end: DateTime(2026, 10, 13, 10),
+      ),
+    );
+    store.toggle(c.id);
+    t = t.add(const Duration(hours: 2));
+    final today = DateTime(2026, 10, 12);
+    expect(store.entries.first.id, 'tomorrow');
+    expect(
+      store.entriesIn(today, DateTime(2026, 10, 13)).single.isRunning,
+      isTrue,
+    );
+    expect(
+      store.totalsIn(today, DateTime(2026, 10, 14), t)[c.id],
+      const Duration(hours: 3),
+    );
+    expect(store.hasEntriesBefore(today), isFalse);
+    expect(store.hasEntriesBefore(DateTime(2026, 10, 12, 10)), isTrue);
+  });
+
+  test('a failed save is reported and retried', () async {
+    final storage = FlakyStorage();
+    final store = AppStore(storage: storage);
+    storage.fail = true;
+    store.addClient('Acme');
+    await store.flush();
+    expect(store.saveError, contains('quota'));
+    expect(storage.data, isNull);
+
+    storage.fail = false;
+    await store.flush();
+    expect(store.saveError, isNull);
+    expect(storage.data, contains('Acme'));
+  });
+}
+
+class FlakyStorage extends MemoryStorage {
+  bool fail = false;
+
+  @override
+  Future<void> write(String d) async {
+    if (fail) throw StateError('quota exceeded');
+    await super.write(d);
+  }
 }

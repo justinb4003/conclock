@@ -11,6 +11,10 @@ import '../widgets/task_menu.dart';
 /// Entries grouped day → client → task → individual entries, with a sum at
 /// every level. Clients start expanded, tasks collapsed; the unfold buttons
 /// collapse a day (or all days) to client rows. Tap an entry to edit.
+///
+/// Shows a few weeks at a time (years of entries would make every rebuild
+/// slow and the list unscrollable): "Show older" reaches further back, and
+/// "Go to date" starts the list at an earlier day.
 class LogScreen extends StatefulWidget {
   const LogScreen({super.key});
 
@@ -23,6 +27,13 @@ class _LogScreenState extends State<LogScreen> {
   static final _collapsedClients = <String>{};
   static final _expandedTasks = <String>{};
 
+  /// Weeks shown per step of "Show older".
+  static const _step = 4;
+
+  /// Last day shown, or null for the newest entries.
+  static DateTime? _upTo;
+  static int _weeks = _step;
+
   void _toggle(Set<String> set, String key) => setState(() {
     if (!set.remove(key)) set.add(key);
   });
@@ -30,7 +41,13 @@ class _LogScreenState extends State<LogScreen> {
   /// Flattens the grouping into rows for a lazy ListView.
   List<_Item> _items(AppStore store) {
     final items = <_Item>[];
-    final all = store.entries; // newest first
+    final upTo = _upTo;
+    final last = upTo ?? dayStart(store.now());
+    final from = addDays(last, 1 - 7 * _weeks);
+    if (upTo != null) items.add(_JumpedItem(upTo));
+    // Entries dated after today (rare, manual) still show in the newest view.
+    final to = upTo == null ? DateTime(9999) : addDays(upTo, 1);
+    final all = store.entriesIn(from, to).toList(); // newest first
     var i = 0;
     while (i < all.length) {
       final day = dayStart(all[i].start);
@@ -74,8 +91,34 @@ class _LogScreenState extends State<LogScreen> {
         }
       }
     }
+    if (store.hasEntriesBefore(from)) items.add(_OlderItem(from));
     return items;
   }
+
+  Future<void> _goToDate(AppStore store) async {
+    final today = dayStart(store.now());
+    final oldest = store.entries.isEmpty
+        ? today
+        : dayStart(store.entries.last.start);
+    final initial = _upTo ?? today;
+    final d = await showDatePicker(
+      context: context,
+      helpText: 'Show the log from',
+      initialDate: initial.isBefore(oldest) ? oldest : initial,
+      firstDate: oldest.isBefore(today) ? oldest : today,
+      lastDate: today,
+    );
+    if (d == null) return;
+    setState(() {
+      _upTo = d == today ? null : dayStart(d);
+      _weeks = _step;
+    });
+  }
+
+  void _backToLatest() => setState(() {
+    _upTo = null;
+    _weeks = _step;
+  });
 
   /// Collapses [days] to their client rows, or expands them if none is open.
   void _toggleDays(Iterable<_DayItem> days) => setState(() {
@@ -99,7 +142,13 @@ class _LogScreenState extends State<LogScreen> {
       appBar: AppBar(
         title: const Text('Log'),
         actions: [
-          if (items.isNotEmpty)
+          if (store.entries.isNotEmpty)
+            IconButton(
+              tooltip: 'Go to date',
+              onPressed: () => _goToDate(store),
+              icon: const Icon(Icons.event_outlined),
+            ),
+          if (days.isNotEmpty)
             IconButton(
               tooltip: anyOpen ? 'Collapse all' : 'Expand all',
               onPressed: () => _toggleDays(days),
@@ -116,9 +165,11 @@ class _LogScreenState extends State<LogScreen> {
         onPressed: () => showEntryEditor(context),
         child: const Icon(Icons.add),
       ),
-      body: items.isEmpty
+      body: store.entries.isEmpty
           ? const Center(child: Text('No time tracked yet'))
           : ListView.builder(
+              // Start at the top again after jumping.
+              key: ValueKey(_upTo),
               padding: const EdgeInsets.only(bottom: 88),
               itemCount: items.length,
               itemBuilder: (context, i) => switch (items[i]) {
@@ -140,6 +191,15 @@ class _LogScreenState extends State<LogScreen> {
                 _EntryItem item => _EntryRow(
                   entry: item.entries.single,
                   decimal: decimal,
+                ),
+                _JumpedItem item => _JumpedBanner(
+                  day: item.day,
+                  onBack: _backToLatest,
+                ),
+                _OlderItem item => _ShowOlder(
+                  from: item.from,
+                  empty: days.isEmpty,
+                  onTap: () => setState(() => _weeks += _step),
                 ),
               },
             ),
@@ -185,6 +245,21 @@ class _TaskItem extends _Item {
 
 class _EntryItem extends _Item {
   _EntryItem(Entry e) : super([e]);
+}
+
+/// Top of the list when it starts at an earlier date.
+class _JumpedItem extends _Item {
+  const _JumpedItem(this.day) : super(const []);
+
+  final DateTime day;
+}
+
+/// Bottom of the list while older entries exist.
+class _OlderItem extends _Item {
+  const _OlderItem(this.from) : super(const []);
+
+  /// First day shown.
+  final DateTime from;
 }
 
 // -------------------------------------------------------------------- rows
@@ -407,6 +482,79 @@ class _EntryRow extends StatelessWidget {
             _Sum(entries: [e], decimal: decimal, style: style, seconds: true),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _JumpedBanner extends StatelessWidget {
+  const _JumpedBanner({required this.day, required this.onBack});
+
+  final DateTime day;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Showing ${MaterialLocalizations.of(context).formatMediumDate(day)} '
+                'and earlier',
+                style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: onBack,
+              icon: const Icon(Icons.vertical_align_top, size: 18),
+              label: const Text('Back to latest'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ShowOlder extends StatelessWidget {
+  const _ShowOlder({
+    required this.from,
+    required this.empty,
+    required this.onTap,
+  });
+
+  final DateTime from;
+
+  /// Nothing tracked in the weeks shown so far.
+  final bool empty;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final date = MaterialLocalizations.of(context).formatMediumDate(from);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        children: [
+          Text(
+            empty ? 'Nothing tracked since $date' : 'Showing since $date',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 4),
+          OutlinedButton.icon(
+            onPressed: onTap,
+            icon: const Icon(Icons.expand_more),
+            label: const Text('Show older'),
+          ),
+        ],
       ),
     );
   }

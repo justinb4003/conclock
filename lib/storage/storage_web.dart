@@ -1,40 +1,101 @@
+import 'dart:async';
 import 'dart:js_interop';
 
 import 'package:web/web.dart' as web;
 
 import 'storage_base.dart';
 
-DataStorage createStorage() => _LocalStorage();
+DataStorage createStorage() => _IndexedDbStorage();
 
-/// Stores data in the browser's localStorage.
-class _LocalStorage extends DataStorage {
-  static const _key = 'conclock.data';
+/// Stores data in the browser's IndexedDB, which (unlike localStorage's
+/// ~5 MB) can hold years of entries. Data saved by older versions in
+/// localStorage moves over on first load.
+class _IndexedDbStorage extends DataStorage {
+  static const _db = 'conclock';
+  static const _store = 'kv';
+  static const _key = 'data';
+  static const _legacyKey = 'conclock.data'; // localStorage, before IndexedDB
+
+  /// Tells other tabs of this origin about saves.
+  final _channel = web.BroadcastChannel('conclock');
+
+  Future<web.IDBDatabase>? _opening;
 
   @override
-  String get location => 'Browser local storage';
+  String get location => 'Browser storage (IndexedDB)';
+
+  Future<web.IDBDatabase> _open() => _opening ??= () {
+    // Ask the browser not to clear it when space runs low.
+    web.window.navigator.storage.persist().toDart.ignore();
+    final req = web.window.indexedDB.open(_db, 1);
+    req.onupgradeneeded = ((web.Event _) {
+      (req.result as web.IDBDatabase).createObjectStore(_store);
+    }).toJS;
+    return _done(req).then((r) => r as web.IDBDatabase);
+  }();
+
+  static Future<JSAny?> _done(web.IDBRequest req) {
+    final c = Completer<JSAny?>();
+    req.onsuccess = ((web.Event _) => c.complete(req.result)).toJS;
+    req.onerror = ((web.Event _) => c.completeError(_message(req.error))).toJS;
+    return c.future;
+  }
+
+  static String _message(web.DOMException? e) =>
+      e == null ? 'IndexedDB error' : '${e.name}: ${e.message}';
+
+  Future<String?> _get(String key) async {
+    final db = await _open();
+    final store = db.transaction(_store.toJS, 'readonly').objectStore(_store);
+    final v = await _done(store.get(key.toJS));
+    return v.isA<JSString>() ? (v as JSString).toDart : null;
+  }
+
+  /// Resolves once the write is committed (or fails, e.g. quota exceeded).
+  Future<void> _put(String key, String value) async {
+    final db = await _open();
+    final tx = db.transaction(_store.toJS, 'readwrite');
+    final c = Completer<void>();
+    tx.oncomplete = ((web.Event _) => c.complete()).toJS;
+    tx.onerror = ((web.Event _) {
+      if (!c.isCompleted) c.completeError(_message(tx.error));
+    }).toJS;
+    tx.onabort = ((web.Event _) {
+      if (!c.isCompleted) c.completeError(_message(tx.error));
+    }).toJS;
+    tx.objectStore(_store).put(value.toJS, key.toJS);
+    return c.future;
+  }
 
   @override
-  Future<String?> read() async => web.window.localStorage.getItem(_key);
+  Future<String?> read() async {
+    final data = await _get(_key);
+    if (data != null) return data;
+    final legacy = web.window.localStorage.getItem(_legacyKey);
+    if (legacy != null) {
+      await _put(_key, legacy);
+      web.window.localStorage.removeItem(_legacyKey);
+    }
+    return legacy;
+  }
 
   @override
-  Future<void> write(String data) async =>
-      web.window.localStorage.setItem(_key, data);
+  Future<void> write(String data) async {
+    await _put(_key, data);
+    _channel.postMessage(data.toJS);
+  }
 
   @override
   void watch(void Function(String data) onChange) {
-    // Fires in every other tab of this origin when one tab writes.
-    web.window.addEventListener(
-      'storage',
-      (web.StorageEvent e) {
-        final v = e.newValue;
-        if (e.key == _key && v != null) onChange(v);
-      }.toJS,
-    );
+    _channel.onmessage = ((web.MessageEvent e) {
+      final v = e.data;
+      if (v.isA<JSString>()) onChange((v as JSString).toDart);
+    }).toJS;
   }
 
   @override
   Future<void> keepCopy(String tag, String? data) async {
-    final v = data ?? web.window.localStorage.getItem(_key);
-    if (v != null) web.window.localStorage.setItem('$_key.$tag', v);
+    final v = data ?? await _get(_key);
+    if (v != null) await _put('$_key.$tag', v);
   }
 }

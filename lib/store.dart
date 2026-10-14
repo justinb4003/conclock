@@ -27,6 +27,9 @@ class AppStore extends ChangeNotifier {
 
   String? loadError;
 
+  /// Why the last save failed (e.g. storage full), until one succeeds.
+  String? saveError;
+
   /// Log shows durations as decimal hours (1.50) instead of h:mm.
   bool decimalHours = false;
 
@@ -184,13 +187,9 @@ class AppStore extends ChangeNotifier {
     _dirty = true;
     notifyListeners();
     _saveTimer?.cancel();
-    // localStorage writes are cheap, and a closing tab gives no time to
-    // flush, so the web saves right away; files are batched.
-    if (kIsWeb) {
-      flush();
-    } else {
-      _saveTimer = Timer(const Duration(milliseconds: 400), flush);
-    }
+    // Batched so typing doesn't re-save everything per keystroke; the app
+    // flushes when hidden or closed (see main.dart).
+    _saveTimer = Timer(const Duration(milliseconds: 400), flush);
   }
 
   /// Writes pending changes now. Writes are serialized.
@@ -200,11 +199,24 @@ class AppStore extends ChangeNotifier {
     if (!_dirty) return _writing;
     _dirty = false;
     final json = kIsWeb
-        ? jsonEncode(toJson()) // compact: localStorage has a ~5 MB quota
+        ? jsonEncode(toJson()) // nobody reads it by eye there
         : const JsonEncoder.withIndent('  ').convert(toJson());
     return _writing = _writing
         .then((_) => _storage.write(json))
-        .catchError((Object e) => debugPrint('ConClock: save failed: $e'));
+        .then(
+          (_) => _setSaveError(null),
+          onError: (Object e) {
+            debugPrint('ConClock: save failed: $e');
+            _setSaveError('$e');
+            _dirty = true; // retried on the next change or flush
+          },
+        );
+  }
+
+  void _setSaveError(String? e) {
+    if (saveError == e) return;
+    saveError = e;
+    notifyListeners();
   }
 
   @override
@@ -262,7 +274,10 @@ class AppStore extends ChangeNotifier {
 
   /// Entries that started in [from, to), newest first.
   Iterable<Entry> entriesIn(DateTime from, DateTime to) =>
-      entries.where((e) => !e.start.isBefore(from) && e.start.isBefore(to));
+      entries.skip(_firstBefore(to)).takeWhile((e) => !e.start.isBefore(from));
+
+  /// Whether any entry started before [t].
+  bool hasEntriesBefore(DateTime t) => _firstBefore(t) < entries.length;
 
   /// Total time per client for entries that started in [from, to).
   Map<String, Duration> totalsIn(DateTime from, DateTime to, DateTime now) {
@@ -362,7 +377,7 @@ class AppStore extends ChangeNotifier {
       start: t,
       note: note ?? '',
     );
-    entries.insert(0, e);
+    _insertSorted(e);
     _changed();
     return e;
   }
@@ -374,8 +389,7 @@ class AppStore extends ChangeNotifier {
     if (r == null) return;
     final t = now();
     _stopEntry(r, from.isBefore(r.start) ? r.start : from);
-    entries.insert(
-      0,
+    _insertSorted(
       Entry(id: newId(), clientId: r.clientId, start: t, note: r.note),
     );
     _changed();
@@ -495,6 +509,24 @@ class AppStore extends ChangeNotifier {
   }
 
   void _sort() => entries.sort((a, b) => b.start.compareTo(a.start));
+
+  /// Usually at the front, but a manual entry may start later.
+  void _insertSorted(Entry e) => entries.insert(_firstBefore(e.start), e);
+
+  /// Index of the first (newest) entry that started before [t]; entries are
+  /// sorted newest first, so everything from there on did too.
+  int _firstBefore(DateTime t) {
+    var lo = 0, hi = entries.length;
+    while (lo < hi) {
+      final mid = (lo + hi) >> 1;
+      if (entries[mid].start.isBefore(t)) {
+        hi = mid;
+      } else {
+        lo = mid + 1;
+      }
+    }
+    return lo;
+  }
 
   // ----------------------------------------------------------------- clients
 

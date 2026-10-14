@@ -41,4 +41,34 @@ void main() {
     expect(find.text('Monday work'), findsOneWidget);
     expect(find.text('Tuesday work'), findsOneWidget);
   });
+
+  testWidgets('shows recent weeks; "Show older" reaches back', (tester) async {
+    var t = DateTime(2026, 10, 12, 9);
+    final store = AppStore(storage: MemoryStorage(), clock: () => t);
+    final acme = store.addClient('Acme');
+    for (final (start, task) in [
+      (DateTime(2026, 6, 1, 9), 'June work'),
+      (DateTime(2026, 10, 1, 9), 'October work'),
+    ]) {
+      t = start;
+      store.toggle(acme.id, note: task);
+      t = t.add(const Duration(hours: 1));
+      store.stop();
+    }
+    t = DateTime(2026, 10, 12, 9);
+    await tester.pumpWidget(ConClockApp(store: store));
+    await tester.pump();
+    await tester.tap(find.text('Log').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('October work'), findsOneWidget);
+    expect(find.text('June work'), findsNothing);
+    for (var i = 0; i < 8 && find.text('June work').evaluate().isEmpty; i++) {
+      await tester.scrollUntilVisible(find.text('Show older'), 200);
+      await tester.tap(find.text('Show older'));
+      await tester.pump();
+    }
+    expect(find.text('June work'), findsOneWidget);
+    expect(find.text('Show older'), findsNothing); // nothing older left
+  });
 }
