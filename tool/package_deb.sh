@@ -16,11 +16,17 @@ ROOT="$(mktemp -d)"
 trap 'rm -rf "$ROOT"' EXIT
 
 install -d "$ROOT/opt/conclock" "$ROOT/usr/bin" "$ROOT/DEBIAN" \
-  "$ROOT/usr/share/applications" "$ROOT/usr/share/icons/hicolor/512x512/apps"
+  "$ROOT/usr/share/applications" "$ROOT/usr/share/icons/hicolor/512x512/apps" \
+  "$ROOT/usr/share/icons/hicolor/256x256/apps" \
+  "$ROOT/usr/share/icons/hicolor/scalable/apps"
 cp -r "$BUNDLE"/. "$ROOT/opt/conclock/"
 ln -s /opt/conclock/conclock "$ROOT/usr/bin/conclock"
 install -m 644 web/icons/Icon-512.png \
   "$ROOT/usr/share/icons/hicolor/512x512/apps/$APP_ID.png"
+install -m 644 assets/icon/conclock-256.png \
+  "$ROOT/usr/share/icons/hicolor/256x256/apps/$APP_ID.png"
+install -m 644 assets/icon/conclock.svg \
+  "$ROOT/usr/share/icons/hicolor/scalable/apps/$APP_ID.svg"
 
 cat > "$ROOT/usr/share/applications/$APP_ID.desktop" <<DESKTOP
 [Desktop Entry]

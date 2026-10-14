@@ -97,6 +97,11 @@ install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
 install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   COMPONENT Runtime)
 
+# Window icon, loaded by runner/my_application.cc.
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../assets/icon/conclock-256.png"
+  DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" RENAME app_icon.png
+  COMPONENT Runtime)
+
 install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
 
