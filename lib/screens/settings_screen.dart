@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../backup/backup.dart';
 import '../desktop/desktop.dart';
+import '../models.dart';
 import '../store.dart';
 import '../widgets/common.dart';
 import '../widgets/data_location.dart';
@@ -31,6 +32,87 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           header('Display'),
+          ListTile(
+            title: const Text('Theme'),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: SegmentedButton<ThemeMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: ThemeMode.system,
+                    icon: Icon(Icons.brightness_auto_outlined),
+                    label: Text('System'),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.light,
+                    icon: Icon(Icons.light_mode_outlined),
+                    label: Text('Light'),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.dark,
+                    icon: Icon(Icons.dark_mode_outlined),
+                    label: Text('Dark'),
+                  ),
+                ],
+                selected: {store.themeMode},
+                showSelectedIcon: false,
+                onSelectionChanged: (s) => store.setThemeMode(s.first),
+              ),
+            ),
+          ),
+          ListTile(
+            title: const Text('Color'),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final c in clientPalette)
+                    InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => store.setAppColor(c),
+                      child: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: Color(c),
+                        child: c == store.appColor
+                            ? const Icon(
+                                Icons.check,
+                                size: 18,
+                                color: Colors.white,
+                              )
+                            : null,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          ListTile(
+            title: const Text('Background'),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SegmentedButton<Backdrop>(
+                  segments: const [
+                    ButtonSegment(
+                      value: Backdrop.neutral,
+                      label: Text('Neutral'),
+                    ),
+                    ButtonSegment(
+                      value: Backdrop.tinted,
+                      label: Text('Tinted'),
+                    ),
+                    ButtonSegment(value: Backdrop.bold, label: Text('Bold')),
+                  ],
+                  selected: {store.background},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (s) => store.setBackground(s.first),
+                ),
+              ),
+            ),
+          ),
           SwitchListTile(
             title: const Text('Monospace times'),
             subtitle: Text.rich(

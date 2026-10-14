@@ -12,7 +12,7 @@ one JSON file.
   copy the week as tab-separated decimal hours for a spreadsheet. Optional
   rounding up to ½ h, per task or per client-day.
 - **Clients** — add, rename, recolor, drag to reorder, archive, delete.
-- **Settings** — monospace font for times, decimal hours, tray behavior,
+- **Settings** — theme (system / light / dark), app color and background tint, monospace font for times, decimal hours, tray behavior,
   data location, export/import backups.
 
 Desktop: closing the window keeps ConClock running in the system tray (menu

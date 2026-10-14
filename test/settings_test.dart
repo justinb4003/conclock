@@ -1,4 +1,5 @@
 import 'package:conclock/main.dart';
+import 'package:conclock/models.dart';
 import 'package:conclock/store.dart';
 import 'package:conclock/widgets/common.dart';
 import 'package:flutter/material.dart';
@@ -37,5 +38,60 @@ void main() {
     final reloaded = AppStore(storage: storage);
     await reloaded.load();
     expect(reloaded.monoTimes, isTrue);
+  });
+
+  testWidgets('theme: system, light or dark', (tester) async {
+    final storage = MemoryStorage();
+    final store = AppStore(storage: storage);
+    await tester.pumpWidget(ConClockApp(store: store));
+    await tester.tap(find.text('Settings').last);
+    await tester.pumpAndSettle();
+
+    Brightness brightness() =>
+        Theme.of(tester.element(find.text('Theme'))).brightness;
+    expect(store.themeMode, ThemeMode.system);
+    expect(brightness(), Brightness.light); // the test "OS" is light
+
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+    expect(brightness(), Brightness.dark);
+
+    await tester.tap(find.text('Light'));
+    await tester.pumpAndSettle();
+    expect(brightness(), Brightness.light);
+
+    await tester.tap(find.text('Dark'));
+    await store.flush();
+    final reloaded = AppStore(storage: storage);
+    await reloaded.load();
+    expect(reloaded.themeMode, ThemeMode.dark);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('app color and background strength', (tester) async {
+    final storage = MemoryStorage();
+    final store = AppStore(storage: storage);
+    await tester.pumpWidget(ConClockApp(store: store));
+    await tester.tap(find.text('Settings').last);
+    await tester.pumpAndSettle();
+
+    ThemeData theme() => Theme.of(tester.element(find.text('Color')));
+    final blue = theme().colorScheme.primary;
+
+    await tester.tap(find.byType(CircleAvatar).at(4)); // purple
+    await tester.pumpAndSettle();
+    expect(store.appColor, clientPalette[4]);
+    expect(theme().colorScheme.primary, isNot(blue));
+
+    final purplePlain = theme().colorScheme.surface;
+    await tester.tap(find.text('Bold'));
+    await tester.pumpAndSettle();
+    expect(theme().colorScheme.surface, isNot(purplePlain));
+
+    await store.flush();
+    final reloaded = AppStore(storage: storage);
+    await reloaded.load();
+    expect(reloaded.appColor, clientPalette[4]);
+    expect(reloaded.background, Backdrop.bold);
   });
 }

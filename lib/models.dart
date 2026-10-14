@@ -20,6 +20,9 @@ const clientPalette = <int>[
 /// each client's daily total — always up to the next half hour.
 enum Rounding { off, task, day }
 
+/// How strongly the app color shows in the background (Settings).
+enum Backdrop { neutral, tinted, bold }
+
 final _rng = Random();
 
 String newId() =>

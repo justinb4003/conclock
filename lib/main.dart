@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'desktop/desktop.dart';
 import 'screens/home_screen.dart';
 import 'store.dart';
+import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,24 +47,30 @@ class _ConClockAppState extends State<ConClockApp> {
     super.dispose();
   }
 
-  ThemeData _theme(Brightness b) => ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFF1E88E5),
-      brightness: b,
-    ),
-    visualDensity: VisualDensity.adaptivePlatformDensity,
-  );
-
   @override
   Widget build(BuildContext context) {
     return StoreScope(
       store: widget.store,
-      child: MaterialApp(
-        title: 'ConClock',
-        debugShowCheckedModeBanner: false,
-        theme: _theme(Brightness.light),
-        darkTheme: _theme(Brightness.dark),
-        home: const HomeScreen(),
+      // Rebuilt on store changes for the theme settings; home is const, so
+      // the screens below don't rebuild because of it.
+      child: ListenableBuilder(
+        listenable: widget.store,
+        builder: (context, _) => MaterialApp(
+          title: 'ConClock',
+          debugShowCheckedModeBanner: false,
+          theme: buildTheme(
+            Brightness.light,
+            widget.store.appColor,
+            widget.store.background,
+          ),
+          darkTheme: buildTheme(
+            Brightness.dark,
+            widget.store.appColor,
+            widget.store.background,
+          ),
+          themeMode: widget.store.themeMode,
+          home: const HomeScreen(),
+        ),
       ),
     );
   }

@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter/widgets.dart';
 
 import 'models.dart';
+import 'theme.dart';
 import 'storage/storage.dart';
 
 /// How long a task (an entry's note) stays listed under its client on the
@@ -47,6 +49,15 @@ class AppStore extends ChangeNotifier {
 
   /// Log shows durations as decimal hours (1.50) instead of h:mm.
   bool decimalHours = false;
+
+  /// Light, dark, or whatever the OS uses.
+  ThemeMode themeMode = ThemeMode.system;
+
+  /// Color the theme is built from (ARGB).
+  int appColor = defaultAppColor;
+
+  /// How much of [appColor] shows in the background.
+  Backdrop background = Backdrop.neutral;
 
   /// Timesheet rounding (up to the next half hour).
   Rounding rounding = Rounding.off;
@@ -182,6 +193,11 @@ class AppStore extends ChangeNotifier {
     decimalHours = settings['decimalHours'] as bool? ?? false;
     rounding =
         Rounding.values.asNameMap()[settings['rounding']] ?? Rounding.off;
+    themeMode =
+        ThemeMode.values.asNameMap()[settings['theme']] ?? ThemeMode.system;
+    appColor = settings['appColor'] as int? ?? defaultAppColor;
+    background =
+        Backdrop.values.asNameMap()[settings['background']] ?? Backdrop.neutral;
     closeToTray = settings['closeToTray'] as bool? ?? true;
     monoTimes = settings['monoTimes'] as bool? ?? false;
     collapsedClients
@@ -213,6 +229,9 @@ class AppStore extends ChangeNotifier {
     'settings': {
       'decimalHours': decimalHours,
       'rounding': rounding.name,
+      'theme': themeMode.name,
+      'appColor': appColor,
+      'background': background.name,
       'closeToTray': closeToTray,
       'monoTimes': monoTimes,
       'collapsedClients': [
@@ -397,6 +416,24 @@ class AppStore extends ChangeNotifier {
         ? ids.map(collapsedClients.add).toList().contains(true)
         : ids.map(collapsedClients.remove).toList().contains(true);
     if (changed) _changed();
+  }
+
+  void setThemeMode(ThemeMode v) {
+    if (themeMode == v) return;
+    themeMode = v;
+    _changed();
+  }
+
+  void setAppColor(int v) {
+    if (appColor == v) return;
+    appColor = v;
+    _changed();
+  }
+
+  void setBackground(Backdrop v) {
+    if (background == v) return;
+    background = v;
+    _changed();
   }
 
   void setRounding(Rounding v) {
