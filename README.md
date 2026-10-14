@@ -37,7 +37,9 @@ python3 tool/seed_test_data.py   # 4 weeks of 9-5 test data (--remove to undo)
 
 GitHub Actions (`.github/workflows/build.yml`) tests and builds on every push:
 Linux x64 (`.tar.gz` and `.deb`) and Windows x64 (`.zip`) as workflow
-artifacts. Push a `v*` tag (e.g. `git tag v1.0.0 && git push --tags`) to
+artifacts. Pushes to `main` also deploy the web app to GitHub Pages:
+https://justinb4003.github.io/conclock/ (data stays in your browser; open
+tabs stay in sync). Push a `v*` tag (e.g. `git tag v1.0.0 && git push --tags`) to
 publish them as a GitHub release.
 
 ```sh

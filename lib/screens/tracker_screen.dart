@@ -24,8 +24,8 @@ class _TrackerScreenState extends State<TrackerScreen> {
 
   /// On phones, popping the keyboard on every switch is more annoying than
   /// helpful; on desktop/web it makes "click client, type note" instant.
+  /// (On the web this reflects the device, so phone browsers count as phones.)
   bool get _autofocusNote =>
-      kIsWeb ||
       !(defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS);
 

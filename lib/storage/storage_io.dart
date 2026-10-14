@@ -9,7 +9,7 @@ DataStorage createStorage() => _FileStorage();
 /// Stores data as `conclock.json` in the platform's app-support directory.
 /// Writes go to a temp file first and are renamed into place, so a crash
 /// mid-write never leaves a half-written file.
-class _FileStorage implements DataStorage {
+class _FileStorage extends DataStorage {
   File? _file;
 
   Future<File> _getFile() async {

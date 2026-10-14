@@ -5,7 +5,7 @@ import 'package:conclock/storage/storage.dart';
 import 'package:conclock/store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class MemoryStorage implements DataStorage {
+class MemoryStorage extends DataStorage {
   String? data;
 
   @override
@@ -19,6 +19,11 @@ class MemoryStorage implements DataStorage {
 
   @override
   Future<void> backupCorrupt() async {}
+
+  void Function(String)? onChange;
+
+  @override
+  void watch(void Function(String data) onChange) => this.onChange = onChange;
 }
 
 void main() {
@@ -147,6 +152,21 @@ void main() {
       store.taskTotalIn(a.id, 'Workshop', DateTime(2026), DateTime(2027), t),
       const Duration(hours: 1),
     );
+  });
+
+  test('adopts data saved by another tab', () async {
+    await store.load();
+    final other = AppStore(storage: MemoryStorage());
+    other.addClient('From other tab');
+    var notified = false;
+    store.addListener(() => notified = true);
+
+    storage.onChange!(jsonEncode(other.toJson()));
+    expect(store.clients.single.name, 'From other tab');
+    expect(notified, isTrue);
+
+    storage.onChange!('{garbage'); // ignored, state kept
+    expect(store.clients.single.name, 'From other tab');
   });
 
   test('corrupt data does not crash load', () async {

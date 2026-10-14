@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'models.dart';
@@ -51,25 +52,7 @@ class AppStore extends ChangeNotifier {
   Future<void> load() async {
     try {
       final raw = await _storage.read();
-      if (raw == null || raw.trim().isEmpty) return;
-      final data = jsonDecode(raw) as Map<String, dynamic>;
-      clients
-        ..clear()
-        ..addAll([
-          for (final c in data['clients'] as List? ?? const [])
-            Client.fromJson(c as Map<String, dynamic>),
-        ]);
-      entries
-        ..clear()
-        ..addAll([
-          for (final e in data['entries'] as List? ?? const [])
-            Entry.fromJson(e as Map<String, dynamic>),
-        ]);
-      _sort();
-      final settings = data['settings'] as Map<String, dynamic>? ?? const {};
-      decimalHours = settings['decimalHours'] as bool? ?? false;
-      rounding =
-          Rounding.values.asNameMap()[settings['rounding']] ?? Rounding.off;
+      if (raw != null && raw.trim().isNotEmpty) _apply(raw);
     } catch (e) {
       clients.clear();
       entries.clear();
@@ -80,6 +63,37 @@ class AppStore extends ChangeNotifier {
         await _storage.backupCorrupt();
       } catch (_) {}
     }
+    // Another browser tab saved: adopt its data so we don't overwrite it.
+    _storage.watch((raw) {
+      try {
+        _apply(raw);
+        _dirty = false;
+        notifyListeners();
+      } catch (e) {
+        debugPrint('ConClock: ignoring unreadable external change: $e');
+      }
+    });
+  }
+
+  void _apply(String raw) {
+    final data = jsonDecode(raw) as Map<String, dynamic>;
+    clients
+      ..clear()
+      ..addAll([
+        for (final c in data['clients'] as List? ?? const [])
+          Client.fromJson(c as Map<String, dynamic>),
+      ]);
+    entries
+      ..clear()
+      ..addAll([
+        for (final e in data['entries'] as List? ?? const [])
+          Entry.fromJson(e as Map<String, dynamic>),
+      ]);
+    _sort();
+    final settings = data['settings'] as Map<String, dynamic>? ?? const {};
+    decimalHours = settings['decimalHours'] as bool? ?? false;
+    rounding =
+        Rounding.values.asNameMap()[settings['rounding']] ?? Rounding.off;
   }
 
   Map<String, dynamic> toJson() => {
@@ -95,7 +109,13 @@ class AppStore extends ChangeNotifier {
     _dirty = true;
     notifyListeners();
     _saveTimer?.cancel();
-    _saveTimer = Timer(const Duration(milliseconds: 400), flush);
+    // localStorage writes are cheap, and a closing tab gives no time to
+    // flush, so the web saves right away; files are batched.
+    if (kIsWeb) {
+      flush();
+    } else {
+      _saveTimer = Timer(const Duration(milliseconds: 400), flush);
+    }
   }
 
   /// Writes pending changes now. Writes are serialized.
@@ -104,7 +124,9 @@ class AppStore extends ChangeNotifier {
     _saveTimer = null;
     if (!_dirty) return _writing;
     _dirty = false;
-    final json = const JsonEncoder.withIndent('  ').convert(toJson());
+    final json = kIsWeb
+        ? jsonEncode(toJson()) // compact: localStorage has a ~5 MB quota
+        : const JsonEncoder.withIndent('  ').convert(toJson());
     return _writing = _writing
         .then((_) => _storage.write(json))
         .catchError((Object e) => debugPrint('ConClock: save failed: $e'));

@@ -1,3 +1,5 @@
+import 'dart:js_interop';
+
 import 'package:web/web.dart' as web;
 
 import 'storage_base.dart';
@@ -5,7 +7,7 @@ import 'storage_base.dart';
 DataStorage createStorage() => _LocalStorage();
 
 /// Stores data in the browser's localStorage.
-class _LocalStorage implements DataStorage {
+class _LocalStorage extends DataStorage {
   static const _key = 'conclock.data';
 
   @override
@@ -17,6 +19,18 @@ class _LocalStorage implements DataStorage {
   @override
   Future<void> write(String data) async =>
       web.window.localStorage.setItem(_key, data);
+
+  @override
+  void watch(void Function(String data) onChange) {
+    // Fires in every other tab of this origin when one tab writes.
+    web.window.addEventListener(
+      'storage',
+      (web.StorageEvent e) {
+        final v = e.newValue;
+        if (e.key == _key && v != null) onChange(v);
+      }.toJS,
+    );
+  }
 
   @override
   Future<void> backupCorrupt() async {
