@@ -151,6 +151,15 @@ jobs:
   windows:
     needs: test
     runs-on: windows-latest
+    # Pushes and manual runs sign with Azure Artifact Signing via OIDC; the
+    # Azure federated credential trusts the "signing" environment. Pull
+    # requests get no environment and build unsigned.
+    environment: ${{ github.event_name != 'pull_request' && 'signing' || '' }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SIGN: ${{ github.event_name != 'pull_request' && vars.AZURE_CLIENT_ID != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -159,6 +168,27 @@ jobs:
           channel: stable
           cache: true
       - run: flutter build windows --release
+      - name: Azure login
+        if: env.SIGN == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      # Before the MSVC runtime is copied in; Microsoft already signed those.
+      - name: Sign app binaries
+        if: env.SIGN == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\build\windows\x64\runner\Release
+          files-folder-filter: exe,dll
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
       - name: Build installer
         shell: pwsh
         run: |
@@ -179,6 +209,18 @@ jobs:
           & $iscc "/DAppVersion=$version" "/DSourceDir=$release" "/DOutputDir=$out" windows\installer\conclock.iss
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Get-ChildItem dist
+      - name: Sign installer
+        if: env.SIGN == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\dist
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
       - uses: actions/upload-artifact@v4
         with:
           name: conclock-windows-x64
