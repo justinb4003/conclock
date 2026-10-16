@@ -35,7 +35,12 @@ void main() {
     final before = gap();
 
     // Resume the older task: Globex moves to the top, that task first.
-    await tester.tap(find.widgetWithText(ListTile, 'Old task'));
+    await tester.tap(
+      find.descendant(
+        of: find.widgetWithText(ListTile, 'Old task'),
+        matching: find.byType(IconButton),
+      ),
+    );
     await tester.pump(); // the tap's async start
     await tester.pump(); // reorders, then measures
     await tester.pump(const Duration(milliseconds: 100));

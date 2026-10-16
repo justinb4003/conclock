@@ -20,7 +20,17 @@ void main() {
     store.addClient('Globex');
     await tester.pump();
 
+    // Only the play button starts a client, not the rest of its row.
+    Finder play(String client) => find
+        .descendant(
+          of: find.widgetWithText(ListTile, client),
+          matching: find.byType(IconButton),
+        )
+        .first;
     await tester.tap(find.text('Acme'));
+    await tester.pump();
+    expect(store.running, isNull);
+    await tester.tap(play('Acme'));
     await tester.pump();
     expect(store.running?.clientId, store.clients.first.id);
 
@@ -35,14 +45,14 @@ void main() {
     expect(store.running?.note, 'Kickoff');
     later();
 
-    await tester.tap(find.text('Globex'));
+    await tester.tap(play('Globex'));
     await tester.pump();
     expect(store.running?.clientId, store.clients.last.id);
     expect(store.running?.note, '');
     later();
 
     // Stopping an unnamed entry asks for a name; backing out keeps it running.
-    await tester.tap(find.byTooltip('Stop'));
+    await tester.tap(find.byTooltip('Stop').first); // the status panel's
     await tester.pumpAndSettle();
     expect(find.text('Name this task'), findsOneWidget);
     await tester.tapAt(const Offset(5, 5)); // dismiss
@@ -50,7 +60,7 @@ void main() {
     expect(store.running?.clientId, store.clients.last.id);
 
     // Switching clients also asks; pick a name, then the switch happens.
-    await tester.tap(find.text('Acme').first);
+    await tester.tap(play('Acme'));
     await tester.pumpAndSettle();
     expect(find.text('Name this task'), findsOneWidget);
     await tester.enterText(find.byType(TextField).last, 'Planning');
@@ -62,7 +72,7 @@ void main() {
     later();
 
     // Discarding while switching drops the entry and still switches.
-    await tester.tap(find.text('Globex').first);
+    await tester.tap(play('Globex'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Discard'));
     await tester.pumpAndSettle();

@@ -619,23 +619,33 @@ class _TrackRow extends StatelessWidget {
       fontWeight: running ? FontWeight.w600 : null,
     );
 
+    // Only the play/stop button starts and stops, not the whole row. Its
+    // touch target is the usual 48px (40 on tasks) around the circle; the
+    // padding and gaps keep the circles and labels where they were.
+    final size = isTask ? 24.0 : 36.0;
     return ListTile(
-      onTap: onTap,
       dense: isTask,
       visualDensity: isTask ? VisualDensity.compact : null,
       selected: running,
       selectedTileColor: color.withValues(alpha: isTask ? 0.08 : 0.12),
       selectedColor: theme.colorScheme.onSurface,
       // Task play buttons line up under the client name.
-      contentPadding: EdgeInsets.only(left: isTask ? 60 : 16, right: 16),
-      leading: CircleAvatar(
-        radius: isTask ? 12 : 18,
-        backgroundColor: running ? color : color.withValues(alpha: 0.18),
-        child: Icon(
-          running ? Icons.stop : Icons.play_arrow,
-          size: isTask ? 16 : null,
-          color: running ? Colors.white : color,
+      contentPadding: EdgeInsets.only(left: isTask ? 52 : 10, right: 16),
+      horizontalTitleGap: isTask ? 8 : 10,
+      leading: IconButton(
+        tooltip: running ? 'Stop' : 'Start',
+        onPressed: onTap,
+        visualDensity: isTask ? VisualDensity.compact : null,
+        iconSize: isTask ? 16 : 24,
+        style: IconButton.styleFrom(
+          backgroundColor: running ? color : color.withValues(alpha: 0.18),
+          foregroundColor: running ? Colors.white : color,
+          minimumSize: Size.square(size),
+          fixedSize: Size.square(size),
+          padding: EdgeInsets.zero,
+          tapTargetSize: MaterialTapTargetSize.padded,
         ),
+        icon: Icon(running ? Icons.stop : Icons.play_arrow),
       ),
       title: Text(
         label,
