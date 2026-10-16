@@ -1,13 +1,25 @@
 import 'package:conclock/main.dart';
 import 'package:conclock/models.dart';
+import 'package:conclock/screens/settings_screen.dart';
 import 'package:conclock/store.dart';
 import 'package:conclock/widgets/common.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'store_test.dart' show MemoryStorage;
 
 void main() {
+  setUpAll(
+    () => PackageInfo.setMockInitialValues(
+      appName: 'conclock',
+      packageName: 'conclock',
+      version: '1.2.3',
+      buildNumber: '9',
+      buildSignature: '',
+    ),
+  );
+
   testWidgets('monospace times setting', (tester) async {
     var t = DateTime(2026, 10, 12, 9);
     final storage = MemoryStorage();
@@ -93,5 +105,17 @@ void main() {
     await reloaded.load();
     expect(reloaded.appColor, clientPalette[4]);
     expect(reloaded.background, Backdrop.bold);
+  });
+
+  testWidgets('about shows the version', (tester) async {
+    final store = AppStore(storage: MemoryStorage());
+    await tester.pumpWidget(ConClockApp(store: store));
+    await tester.tap(find.text('Settings').last);
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(SettingsScreen), const Offset(0, -3000));
+    await tester.pumpAndSettle();
+    expect(find.text('ConClock 1.2.3'), findsOneWidget);
+    // No RELEASE_DATE define under flutter test.
+    expect(find.text('Development build'), findsOneWidget);
   });
 }

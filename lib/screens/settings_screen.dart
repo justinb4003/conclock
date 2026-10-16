@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app_info.dart';
 import '../backup/backup.dart';
 import '../desktop/desktop.dart';
 import '../models.dart';
@@ -7,7 +8,7 @@ import '../store.dart';
 import '../widgets/common.dart';
 import '../widgets/data_location.dart';
 
-/// App-wide options, plus data location and backups.
+/// App-wide options, plus data location, backups and the app version.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -165,7 +166,40 @@ class SettingsScreen extends StatelessWidget {
             title: const Text('Import backup…'),
             onTap: () => importBackup(context),
           ),
+          header('About'),
+          const _AboutTile(),
         ],
+      ),
+    );
+  }
+}
+
+class _AboutTile extends StatefulWidget {
+  const _AboutTile();
+
+  @override
+  State<_AboutTile> createState() => _AboutTileState();
+}
+
+class _AboutTileState extends State<_AboutTile> {
+  final _version = appVersion();
+
+  @override
+  Widget build(BuildContext context) {
+    final released = DateTime.tryParse(releaseDate);
+    return FutureBuilder<String>(
+      future: _version,
+      builder: (context, snapshot) => ListTile(
+        leading: const Icon(Icons.info_outline),
+        title: Text(
+          snapshot.hasData ? 'ConClock ${snapshot.data}' : 'ConClock',
+        ),
+        subtitle: Text(
+          released == null
+              ? 'Development build'
+              : 'Released '
+                    '${MaterialLocalizations.of(context).formatFullDate(released)}',
+        ),
       ),
     );
   }

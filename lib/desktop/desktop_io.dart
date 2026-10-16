@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../app_info.dart';
 import '../format.dart';
 import '../store.dart';
 import '../tracking.dart';
@@ -17,7 +18,10 @@ bool get hasTray =>
 
 /// Call before runApp.
 Future<void> initDesktopWindow() async {
-  if (hasTray) await windowManager.ensureInitialized();
+  if (!hasTray) return;
+  await windowManager.ensureInitialized();
+  // The native runners title the window plain "ConClock".
+  await windowManager.setTitle('ConClock ${await appVersion()}');
 }
 
 /// Tray icon with status and quick actions; closing the window hides it

@@ -43,7 +43,7 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-      - run: flutter build linux --release
+      - run: flutter build linux --release --dart-define=RELEASE_DATE=$(git log -1 --format=%cs)
       - name: Package tarball and .deb
         run: |
           VERSION=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
@@ -76,7 +76,7 @@ jobs:
             https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
       - run: flutter --version
-      - run: flutter build linux --release
+      - run: flutter build linux --release --dart-define=RELEASE_DATE=$(git log -1 --format=%cs)
       - name: Package tarball and .deb
         run: |
           VERSION=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
@@ -135,7 +135,7 @@ jobs:
             echo "attempt $i failed; retrying"; sleep 30
           done
           exit 1
-      - run: flutter build apk --release
+      - run: flutter build apk --release --dart-define=RELEASE_DATE=$(git log -1 --format=%cs)
       - name: Package APK
         run: |
           VERSION=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
@@ -167,7 +167,8 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-      - run: flutter build windows --release
+      - run: flutter build windows --release --dart-define=RELEASE_DATE=$(git log -1 --format=%cs)
+        shell: bash
       - name: Azure login
         if: env.SIGN == 'true'
         uses: azure/login@v3
@@ -237,7 +238,7 @@ jobs:
           channel: stable
           cache: true
       # Universal (Apple Silicon + Intel), ad-hoc signed; not notarized.
-      - run: flutter build macos --release
+      - run: flutter build macos --release --dart-define=RELEASE_DATE=$(git log -1 --format=%cs)
       - name: Package .dmg
         run: |
           VERSION=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
@@ -266,7 +267,7 @@ jobs:
           channel: stable
           cache: true
       # Served from https://<owner>.github.io/<repo>/
-      - run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+      - run: flutter build web --release --dart-define=RELEASE_DATE=$(git log -1 --format=%cs) --base-href "/${{ github.event.repository.name }}/"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
