@@ -27,6 +27,11 @@ class _TrackerScreenState extends State<TrackerScreen> {
   String? _noteEntryId;
   final _scroll = ScrollController();
 
+  /// The entry whose note is being edited and its task name when editing
+  /// began: committing a new name renames the task on its other entries too.
+  String? _editEntryId;
+  String _editFrom = '';
+
   /// The running client, to notice when another one starts.
   String? _runningClient;
 
@@ -48,7 +53,72 @@ class _TrackerScreenState extends State<TrackerScreen> {
     _noteFocus.addListener(_onNoteFocus);
   }
 
-  void _onNoteFocus() => setState(() {});
+  void _onNoteFocus() {
+    if (_noteFocus.hasFocus) {
+      final r = _store?.running;
+      _editEntryId = r?.id;
+      _editFrom = r?.note.trim() ?? '';
+    } else {
+      _commitNote();
+    }
+    setState(() {});
+  }
+
+  /// Fixing a task's name in the field renames the task, not just this
+  /// entry, so a typo doesn't leave two tasks behind.
+  void _commitNote() {
+    final id = _editEntryId;
+    _editEntryId = null;
+    final store = _store;
+    final e = id == null ? null : store?.entryById(id);
+    if (store == null || e == null) return;
+    final from = _editFrom;
+    final to = e.note.trim();
+    if (from.isEmpty || to.isEmpty || to == from) return;
+    final others = [
+      for (final x in store.entries)
+        if (x.id != id && x.clientId == e.clientId) x,
+    ];
+    if (!others.any((x) => x.note.trim() == from)) return;
+    final merging = others.any((x) => x.note.trim() == to);
+    final (:count, :undo) = store.renameTask(
+      e.clientId,
+      from,
+      to,
+      only: others,
+    );
+    if (count == 0 || !mounted) return;
+    toast(
+      context,
+      merging ? 'Merged “$from” into “$to”' : 'Renamed “$from” to “$to”',
+      undo: undo,
+    );
+  }
+
+  /// Ends the running task and starts a new one on the same client. A name
+  /// just typed over the current task's becomes the new task's instead of a
+  /// rename; otherwise the new task starts unnamed, ready to type.
+  void _newTask() {
+    final store = _store!;
+    final r = store.running;
+    if (r == null) return;
+    final typed = r.note.trim();
+    final from = _editEntryId == r.id ? _editFrom : typed;
+    _editEntryId = null;
+    final keep = from.isEmpty ? typed : from;
+    if (keep.isEmpty) return;
+    final next = from.isNotEmpty && typed != from ? typed : '';
+    if (typed != keep) store.setNote(r, keep);
+    final started = store.toggle(r.clientId, note: next);
+    if (next.isNotEmpty) {
+      _noteFocus.unfocus();
+    } else if (_noteFocus.hasFocus) {
+      _editEntryId = started?.id;
+      _editFrom = '';
+    } else {
+      _noteFocus.requestFocus();
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -229,6 +299,13 @@ class _TrackerScreenState extends State<TrackerScreen> {
                     onStop: _stop,
                     // Enter commits the note: it shows up as a running task.
                     onNoteSubmitted: () => setState(_noteFocus.unfocus),
+                    onNewTask:
+                        running != null &&
+                            (running.note.trim().isNotEmpty ||
+                                (_editEntryId == running.id &&
+                                    _editFrom.isNotEmpty))
+                        ? _newTask
+                        : null,
                     onNoteChanged: (v) {
                       if (running != null) store.setNote(running, v);
                     },
@@ -359,6 +436,7 @@ class _StatusPanel extends StatelessWidget {
     required this.onStop,
     required this.onNoteChanged,
     required this.onNoteSubmitted,
+    required this.onNewTask,
     required this.todayTotal,
   });
 
@@ -369,6 +447,9 @@ class _StatusPanel extends StatelessWidget {
   final VoidCallback onStop;
   final ValueChanged<String> onNoteChanged;
   final VoidCallback onNoteSubmitted;
+
+  /// Null when there's no named task to move on from.
+  final VoidCallback? onNewTask;
   final Duration Function(DateTime now) todayTotal;
 
   @override
@@ -445,12 +526,22 @@ class _StatusPanel extends StatelessWidget {
                     onChanged: onNoteChanged,
                     onSubmitted: (_) => onNoteSubmitted(),
                     textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(
-                      hintText: 'Add a note…',
+                    decoration: InputDecoration(
+                      hintText: 'Task name…',
                       isDense: true,
-                      prefixIcon: Icon(Icons.notes, size: 18),
-                      prefixIconConstraints: BoxConstraints(
-                        minWidth: 28,
+                      prefixIcon: IconButton(
+                        tooltip: 'New task',
+                        onPressed: onNewTask,
+                        icon: const Icon(Icons.add_task, size: 18),
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 28,
+                          minHeight: 28,
+                        ),
+                      ),
+                      prefixIconConstraints: const BoxConstraints(
+                        minWidth: 32,
                         minHeight: 0,
                       ),
                     ),
