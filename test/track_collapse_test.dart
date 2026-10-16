@@ -15,9 +15,9 @@ void main() {
     final acme = store.addClient('Acme');
     final globex = store.addClient('Globex');
     for (final (c, task) in [
+      (globex, 'Migration'),
       (acme, 'Design'),
       (acme, 'Review'),
-      (globex, 'Migration'),
     ]) {
       store.toggle(c.id, note: task);
       t = t.add(const Duration(minutes: 30));

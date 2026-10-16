@@ -159,11 +159,9 @@ class _TrackerScreenState extends State<TrackerScreen> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final running = store.running;
-    // The running client leads; the rest keep the user's order.
-    final clients = [
-      ...store.activeClients.where((c) => c.id == running?.clientId),
-      ...store.activeClients.where((c) => c.id != running?.clientId),
-    ];
+    // Most recently started first, so the running client leads (it started
+    // last) and stays near the top after it stops.
+    final clients = store.recentClients;
     if (running?.clientId != _runningClient) {
       _runningClient = running?.clientId;
       // Show it arriving at the top.

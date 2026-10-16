@@ -5,7 +5,9 @@ one JSON file.
 
 - **Track** — tap a client to start; tap another to switch; tap again (or ■) to stop.
   Type a note for the running entry right in the status panel. The running
-  client (and task) slides to the top; the arrow on a client hides its tasks.
+  client (and task) slides to the top and stays there after it stops, so
+  clients line up most recently used first; the arrow on a client hides its
+  tasks.
 - **Log** — every entry grouped by day; tap to edit, + to add time manually.
 - **Timesheet** — Mon–Sun grid: clients down the side (expand for tasks), days
   across, row/day/week totals. Hover (or tap) a cell for that day's tasks;

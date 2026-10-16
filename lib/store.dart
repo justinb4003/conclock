@@ -298,6 +298,23 @@ class AppStore extends ChangeNotifier {
 
   Iterable<Client> get activeClients => clients.where((c) => !c.archived);
 
+  /// Active clients in Track's order: most recently started first, so a
+  /// client stays near the top after it stops and older ones work their way
+  /// down. Clients never started follow in the user's order. Independent of
+  /// that order, which the other tabs use.
+  List<Client> get recentClients {
+    final active = {for (final c in activeClients) c.id: c};
+    final seen = <String>{};
+    return [
+      // Entries are newest first.
+      for (final e in entries)
+        if (active.containsKey(e.clientId) && seen.add(e.clientId))
+          active[e.clientId]!,
+      for (final c in active.values)
+        if (!seen.contains(c.id)) c,
+    ];
+  }
+
   Client? clientById(String id) {
     for (final c in clients) {
       if (c.id == id) return c;
