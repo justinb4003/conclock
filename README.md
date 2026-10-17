@@ -65,11 +65,11 @@ GitHub Actions (`.github/workflows/build.yml`) tests and builds on every push:
 Linux x64 and arm64 (`.tar.gz` and `.deb`), Windows x64 (setup `.exe`), macOS
 universal (`.dmg`) and Android (`.apk`) as workflow artifacts. Pushes to `main` also deploy the web app to GitHub Pages:
 https://justinb4003.github.io/conclock/ (data stays in your browser; open
-tabs stay in sync). Push a `v*` tag (e.g. `git tag v0.5.0 && git push --tags`) to
+tabs stay in sync). Push a `v*` tag (e.g. `git tag v0.6.0 && git push --tags`) to
 publish them as a GitHub release.
 
 ```sh
-sudo apt install ./conclock_0.5.0_amd64.deb   # installs to /opt/conclock
+sudo apt install ./conclock_0.6.0_amd64.deb   # installs to /opt/conclock
 tool/package_deb.sh                             # build the .deb locally
 ```
 
