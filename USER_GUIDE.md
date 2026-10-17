@@ -7,6 +7,11 @@ something else stops what was running. Everything is saved as you go.
 
 The main screen: a status card on top, your clients below.
 
+**h:mm / Decimal**, at the top right of Track, Log and Timesheet, switches
+every screen between 1:30 and 1.50 (the same setting as **Decimal hours** in
+Settings). On a phone it's one button showing the current format; tap it
+to switch.
+
 - **Start / stop**: press the round play button on a client (or on one of its
   tasks). Press it on another client or task to switch; press the stop button
   on the running row, or in the status card, to stop. Only the button reacts;

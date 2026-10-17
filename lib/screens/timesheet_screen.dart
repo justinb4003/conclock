@@ -83,6 +83,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           appBar: AppBar(
             title: const Text('Timesheet'),
             actions: [
+              const HoursFormatToggle(),
               IconButton(
                 tooltip: allOpen ? 'Collapse all' : 'Expand all',
                 onPressed: () => setState(() {

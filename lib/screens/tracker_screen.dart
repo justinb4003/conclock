@@ -328,6 +328,7 @@ class _TrackerScreenState extends State<TrackerScreen> {
       appBar: AppBar(
         title: const Text('Track'),
         actions: [
+          const HoursFormatToggle(),
           if (clients.isNotEmpty)
             IconButton(
               tooltip: 'Quick switch',

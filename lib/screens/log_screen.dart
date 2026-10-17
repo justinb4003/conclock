@@ -121,6 +121,7 @@ class _LogScreenState extends State<LogScreen> {
       appBar: AppBar(
         title: const Text('Log'),
         actions: [
+          const HoursFormatToggle(),
           if (groups.isNotEmpty)
             IconButton(
               tooltip: anyOpen ? 'Collapse all' : 'Expand all',
