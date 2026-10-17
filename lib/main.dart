@@ -62,11 +62,13 @@ class _ConClockAppState extends State<ConClockApp> {
             Brightness.light,
             widget.store.appColor,
             widget.store.background,
+            dyslexic: widget.store.dyslexicFont,
           ),
           darkTheme: buildTheme(
             Brightness.dark,
             widget.store.appColor,
             widget.store.background,
+            dyslexic: widget.store.dyslexicFont,
           ),
           themeMode: widget.store.themeMode,
           home: const HomeScreen(),

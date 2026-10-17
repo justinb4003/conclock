@@ -5,10 +5,18 @@ import 'models.dart';
 /// The app's default color (Settings → Color).
 const defaultAppColor = 0xFF1E88E5;
 
+/// The app font when Settings -> "Dyslexia-friendly font" is on (bundled).
+const dyslexicFont = 'OpenDyslexic';
+
 /// Material 3 theme from the app color. [background] mixes more of the
 /// color into the surfaces (page, cards, navigation) than Material does
-/// on its own.
-ThemeData buildTheme(Brightness brightness, int appColor, Backdrop background) {
+/// on its own. [dyslexic] sets all text in [dyslexicFont].
+ThemeData buildTheme(
+  Brightness brightness,
+  int appColor,
+  Backdrop background, {
+  bool dyslexic = false,
+}) {
   var scheme = ColorScheme.fromSeed(
     seedColor: Color(appColor),
     brightness: brightness,
@@ -34,6 +42,23 @@ ThemeData buildTheme(Brightness brightness, int appColor, Backdrop background) {
   }
   return ThemeData(
     colorScheme: scheme,
+    fontFamily: dyslexic ? dyslexicFont : null,
+    // OpenDyslexic runs wide: at 11px, slightly tightened, "Timesheet"
+    // fits a small phone's navigation bar on one line. Colors as Material's
+    // defaults.
+    navigationBarTheme: dyslexic
+        ? NavigationBarThemeData(
+            labelTextStyle: WidgetStateProperty.resolveWith(
+              (states) => TextStyle(
+                fontSize: 11,
+                letterSpacing: -0.6,
+                color: states.contains(WidgetState.selected)
+                    ? scheme.onSurface
+                    : scheme.onSurfaceVariant,
+              ),
+            ),
+          )
+        : null,
     visualDensity: VisualDensity.adaptivePlatformDensity,
   );
 }

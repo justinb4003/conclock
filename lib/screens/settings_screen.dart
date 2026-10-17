@@ -5,6 +5,7 @@ import '../backup/backup.dart';
 import '../desktop/desktop.dart';
 import '../models.dart';
 import '../store.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/data_location.dart';
 
@@ -32,35 +33,61 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
+          // Most used first; how the app looks (set once) after the data.
           header('Display'),
-          ListTile(
-            title: const Text('Theme'),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: SegmentedButton<ThemeMode>(
-                segments: const [
-                  ButtonSegment(
-                    value: ThemeMode.system,
-                    icon: Icon(Icons.brightness_auto_outlined),
-                    label: Text('System'),
-                  ),
-                  ButtonSegment(
-                    value: ThemeMode.light,
-                    icon: Icon(Icons.light_mode_outlined),
-                    label: Text('Light'),
-                  ),
-                  ButtonSegment(
-                    value: ThemeMode.dark,
-                    icon: Icon(Icons.dark_mode_outlined),
-                    label: Text('Dark'),
+          SwitchListTile(
+            title: const Text('Decimal hours'),
+            subtitle: const Text('Totals as 1.50 instead of 1:30'),
+            value: store.decimalHours,
+            onChanged: store.setDecimalHours,
+          ),
+          SwitchListTile(
+            title: const Text('Monospace times'),
+            subtitle: Text.rich(
+              TextSpan(
+                children: [
+                  const TextSpan(text: 'Show times and durations as  '),
+                  TextSpan(
+                    text: '9:05  1:30:00',
+                    style: TextStyle(fontFamily: monoFont),
                   ),
                 ],
-                selected: {store.themeMode},
-                showSelectedIcon: false,
-                onSelectionChanged: (s) => store.setThemeMode(s.first),
               ),
             ),
+            value: store.monoTimes,
+            onChanged: store.setMonoTimes,
           ),
+          SwitchListTile(
+            title: const Text('Dyslexia-friendly font'),
+            subtitle: const Text(
+              'Set all text in OpenDyslexic',
+              style: TextStyle(fontFamily: dyslexicFont),
+            ),
+            value: store.dyslexicFont,
+            onChanged: store.setDyslexicFont,
+          ),
+          header('Data'),
+          ListTile(
+            leading: const Icon(Icons.folder_outlined),
+            title: const Text('Data location'),
+            subtitle: Text(
+              store.storageLocation,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            onTap: () => showDataLocation(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.upload_file),
+            title: const Text('Export backup…'),
+            onTap: () => exportBackup(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.restore),
+            title: const Text('Import backup…'),
+            onTap: () => importBackup(context),
+          ),
+          header('Appearance'),
           ListTile(
             title: const Text('Color'),
             subtitle: Padding(
@@ -102,27 +129,21 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
-          SwitchListTile(
-            title: const Text('Monospace times'),
-            subtitle: Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(text: 'Show times and durations as  '),
-                  TextSpan(
-                    text: '9:05  1:30:00',
-                    style: TextStyle(fontFamily: monoFont),
-                  ),
+          ListTile(
+            title: const Text('Theme'),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: SegmentedButton<ThemeMode>(
+                segments: const [
+                  ButtonSegment(value: ThemeMode.system, label: Text('System')),
+                  ButtonSegment(value: ThemeMode.light, label: Text('Light')),
+                  ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
                 ],
+                selected: {store.themeMode},
+                showSelectedIcon: false,
+                onSelectionChanged: (s) => store.setThemeMode(s.first),
               ),
             ),
-            value: store.monoTimes,
-            onChanged: store.setMonoTimes,
-          ),
-          SwitchListTile(
-            title: const Text('Decimal hours'),
-            subtitle: const Text('Totals as 1.50 instead of 1:30'),
-            value: store.decimalHours,
-            onChanged: store.setDecimalHours,
           ),
           if (hasTray) ...[
             header('Desktop'),
@@ -133,27 +154,6 @@ class SettingsScreen extends StatelessWidget {
               onChanged: store.setCloseToTray,
             ),
           ],
-          header('Data'),
-          ListTile(
-            leading: const Icon(Icons.folder_outlined),
-            title: const Text('Data location'),
-            subtitle: Text(
-              store.storageLocation,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            onTap: () => showDataLocation(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.upload_file),
-            title: const Text('Export backup…'),
-            onTap: () => exportBackup(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.restore),
-            title: const Text('Import backup…'),
-            onTap: () => importBackup(context),
-          ),
           header('About'),
           const _AboutTile(),
         ],

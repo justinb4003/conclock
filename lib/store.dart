@@ -69,6 +69,9 @@ class AppStore extends ChangeNotifier {
   /// Show times and durations in a monospace font.
   bool monoTimes = false;
 
+  /// Use OpenDyslexic for all of the app's text.
+  bool dyslexicFont = false;
+
   /// Clients whose tasks are hidden on the Track screen.
   final Set<String> collapsedClients = {};
 
@@ -222,6 +225,7 @@ class AppStore extends ChangeNotifier {
         Backdrop.values.asNameMap()[settings['background']] ?? Backdrop.neutral;
     closeToTray = settings['closeToTray'] as bool? ?? true;
     monoTimes = settings['monoTimes'] as bool? ?? false;
+    dyslexicFont = settings['dyslexicFont'] as bool? ?? false;
     collapsedClients
       ..clear()
       ..addAll(collapsed);
@@ -258,6 +262,7 @@ class AppStore extends ChangeNotifier {
       'background': background.name,
       'closeToTray': closeToTray,
       'monoTimes': monoTimes,
+      'dyslexicFont': dyslexicFont,
       'collapsedClients': [
         for (final id in collapsedClients)
           if (clientById(id) != null) id,
@@ -445,6 +450,12 @@ class AppStore extends ChangeNotifier {
   void setMonoTimes(bool v) {
     if (monoTimes == v) return;
     monoTimes = v;
+    _changed();
+  }
+
+  void setDyslexicFont(bool v) {
+    if (dyslexicFont == v) return;
+    dyslexicFont = v;
     _changed();
   }
 

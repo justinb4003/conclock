@@ -68,8 +68,10 @@ flutter:
     - assets/icon/tray.png
     - assets/icon/tray.ico
 
-  # Optional font for times (Settings); bundled so web and every desktop
-  # look the same. SIL Open Font License: assets/fonts/OFL.txt.
+  # Optional fonts (Settings); bundled so web and every desktop look the
+  # same. Both are under the SIL Open Font License: assets/fonts/OFL.txt
+  # (IBM Plex Mono) and assets/fonts/OpenDyslexic-OFL.txt (OpenDyslexic,
+  # from github.com/antijingoist/opendyslexic).
   fonts:
     - family: IBM Plex Mono
       fonts:
@@ -78,6 +80,16 @@ flutter:
           weight: 500
         - asset: assets/fonts/IBMPlexMono-SemiBold.ttf
           weight: 600
+    - family: OpenDyslexic
+      fonts:
+        - asset: assets/fonts/OpenDyslexic-Regular.otf
+        - asset: assets/fonts/OpenDyslexic-Italic.otf
+          style: italic
+        - asset: assets/fonts/OpenDyslexic-Bold.otf
+          weight: 700
+        - asset: assets/fonts/OpenDyslexic-Bold-Italic.otf
+          weight: 700
+          style: italic
 
   # To add assets to your application, add an assets section, like this:
   # assets:

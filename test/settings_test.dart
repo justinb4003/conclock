@@ -2,6 +2,7 @@ import 'package:conclock/main.dart';
 import 'package:conclock/models.dart';
 import 'package:conclock/screens/settings_screen.dart';
 import 'package:conclock/store.dart';
+import 'package:conclock/theme.dart';
 import 'package:conclock/widgets/common.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,6 +60,13 @@ void main() {
     await tester.tap(find.text('Settings').last);
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Dark'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('Dark')); // clear of the nav bar
+    await tester.pumpAndSettle();
     Brightness brightness() =>
         Theme.of(tester.element(find.text('Theme'))).brightness;
     expect(store.themeMode, ThemeMode.system);
@@ -87,6 +95,13 @@ void main() {
     await tester.tap(find.text('Settings').last);
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Bold'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('Bold')); // clear of the nav bar
+    await tester.pumpAndSettle();
     ThemeData theme() => Theme.of(tester.element(find.text('Color')));
     final blue = theme().colorScheme.primary;
 
@@ -105,6 +120,29 @@ void main() {
     await reloaded.load();
     expect(reloaded.appColor, clientPalette[4]);
     expect(reloaded.background, Backdrop.bold);
+  });
+
+  testWidgets('dyslexia-friendly font', (tester) async {
+    final storage = MemoryStorage();
+    final store = AppStore(storage: storage);
+    await tester.pumpWidget(ConClockApp(store: store));
+    await tester.tap(find.text('Settings').last);
+    await tester.pumpAndSettle();
+
+    String? font() => Theme.of(
+      tester.element(find.text('Decimal hours')),
+    ).textTheme.bodyMedium?.fontFamily;
+    expect(font(), isNot(dyslexicFont));
+
+    await tester.tap(find.text('Dyslexia-friendly font'));
+    await tester.pumpAndSettle();
+    expect(store.dyslexicFont, isTrue);
+    expect(font(), dyslexicFont);
+
+    await store.flush();
+    final reloaded = AppStore(storage: storage);
+    await reloaded.load();
+    expect(reloaded.dyslexicFont, isTrue);
   });
 
   testWidgets('about shows the version', (tester) async {
