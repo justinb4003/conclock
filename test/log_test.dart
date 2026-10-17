@@ -1,6 +1,7 @@
 import 'package:conclock/main.dart';
 import 'package:conclock/store.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'store_test.dart' show MemoryStorage;
@@ -113,5 +114,40 @@ void main() {
     await tester.pump();
     expect(find.text('Design'), findsNothing);
     expect(find.text('Audit'), findsOneWidget);
+  });
+
+  testWidgets('a screen reader can open a task and its menu', (tester) async {
+    final semantics = tester.ensureSemantics();
+    var t = DateTime(2026, 10, 12, 9);
+    final store = AppStore(storage: MemoryStorage(), clock: () => t);
+    final acme = store.addClient('Acme');
+    store.toggle(acme.id, note: 'Monday work');
+    t = t.add(const Duration(hours: 1));
+    store.stop();
+    await tester.pumpWidget(ConClockApp(store: store));
+    await tester.pump();
+    await tester.tap(find.text('Log').last);
+    await tester.pumpAndSettle();
+
+    // The row's actions as the platform sees them: on its merged node.
+    SemanticsNode row() {
+      var node = find.semantics
+          .byLabel(RegExp('Monday work'))
+          .evaluate()
+          .single;
+      while (node.isMergedIntoParent) {
+        node = node.parent!;
+      }
+      return node;
+    }
+
+    row().owner!.performAction(row().id, SemanticsAction.tap);
+    await tester.pumpAndSettle();
+    expect(find.text('9:00 AM – 10:00 AM'), findsOneWidget);
+
+    row().owner!.performAction(row().id, SemanticsAction.longPress);
+    await tester.pumpAndSettle();
+    expect(find.text('Rename task…'), findsOneWidget);
+    semantics.dispose();
   });
 }

@@ -37,11 +37,26 @@ class TaskMenuRegion extends StatelessWidget {
     }
   }
 
+  /// The menu for a screen reader's long-press, at the row's center.
+  void _openAtCenter(BuildContext context) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    _open(context, box.localToGlobal(box.size.center(Offset.zero)));
+  }
+
+  // The detector stays out of the semantics tree: it has no tap of its own,
+  // yet would still give screen readers one that does nothing, overriding
+  // the row's (the Log's task rows couldn't be opened). Long-press is
+  // offered to them here instead.
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onSecondaryTapDown: (d) => _open(context, d.globalPosition),
-    onLongPressStart: (d) => _open(context, d.globalPosition),
-    child: child,
+  Widget build(BuildContext context) => Semantics(
+    onLongPress: () => _openAtCenter(context),
+    child: GestureDetector(
+      excludeFromSemantics: true,
+      onSecondaryTapDown: (d) => _open(context, d.globalPosition),
+      onLongPressStart: (d) => _open(context, d.globalPosition),
+      child: child,
+    ),
   );
 }
 
