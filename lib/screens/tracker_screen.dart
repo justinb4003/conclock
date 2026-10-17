@@ -898,19 +898,22 @@ class _TrackRow extends StatelessWidget {
             width: _expandW,
             child: onExpand == null
                 ? null
-                : IconButton(
-                    tooltip: expanded!
-                        ? 'Hide $name tasks'
-                        : 'Show $name tasks',
-                    onPressed: onExpand,
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                    icon: AnimatedRotation(
-                      turns: expanded! ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 120),
-                      child: Icon(
-                        Icons.expand_more,
-                        color: theme.colorScheme.onSurfaceVariant,
+                : Semantics(
+                    expanded: expanded,
+                    child: IconButton(
+                      tooltip: expanded!
+                          ? 'Hide $name tasks'
+                          : 'Show $name tasks',
+                      onPressed: onExpand,
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      icon: AnimatedRotation(
+                        turns: expanded! ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 120),
+                        child: Icon(
+                          Icons.expand_more,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ),

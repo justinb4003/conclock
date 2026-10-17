@@ -333,13 +333,16 @@ class _GroupHeader extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          IconButton(
-            tooltip: item.open ? 'Collapse $what' : 'Expand $what',
-            onPressed: onToggle,
-            visualDensity: VisualDensity.compact,
-            iconSize: 18,
-            color: theme.colorScheme.onSurfaceVariant,
-            icon: Icon(item.open ? Icons.unfold_less : Icons.unfold_more),
+          Semantics(
+            expanded: item.open,
+            child: IconButton(
+              tooltip: item.open ? 'Collapse $what' : 'Expand $what',
+              onPressed: onToggle,
+              visualDensity: VisualDensity.compact,
+              iconSize: 18,
+              color: theme.colorScheme.onSurfaceVariant,
+              icon: Icon(item.open ? Icons.unfold_less : Icons.unfold_more),
+            ),
           ),
           const Spacer(),
           _Sum(entries: item.entries, decimal: decimal, style: style),
@@ -370,28 +373,37 @@ class _SubRow extends StatelessWidget {
     final label = day == null
         ? item.client?.name ?? 'Unknown client'
         : MaterialLocalizations.of(context).formatMediumDate(day);
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 16, 10),
-        child: Row(
-          children: [
-            Chevron(open: item.open),
-            const SizedBox(width: 4),
-            if (day == null) ...[
-              CircleAvatar(
-                radius: 6,
-                backgroundColor: Color(
-                  item.client?.color ?? clientPalette.last,
+    return MergeSemantics(
+      child: Semantics(
+        expanded: item.open,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 16, 10),
+            child: Row(
+              children: [
+                Chevron(open: item.open),
+                const SizedBox(width: 4),
+                if (day == null) ...[
+                  CircleAvatar(
+                    radius: 6,
+                    backgroundColor: Color(
+                      item.client?.color ?? clientPalette.last,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: Text(
+                    label,
+                    style: style,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-            ],
-            Expanded(
-              child: Text(label, style: style, overflow: TextOverflow.ellipsis),
+                _Sum(entries: item.entries, decimal: decimal, style: style),
+              ],
             ),
-            _Sum(entries: item.entries, decimal: decimal, style: style),
-          ],
+          ),
         ),
       ),
     );
@@ -414,46 +426,49 @@ class _TaskRow extends StatelessWidget {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
     final n = item.entries.length;
-    final row = InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(36, 8, 16, 8),
-        child: Row(
-          children: [
-            Chevron(open: item.open),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    item.note.isEmpty
-                        ? TextSpan(
-                            text: 'No note',
-                            style: TextStyle(
-                              color: muted,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          )
-                        : TextSpan(text: item.note),
-                    if (n > 1)
-                      TextSpan(
-                        text: '  ×$n',
-                        style: TextStyle(color: muted),
-                      ),
-                  ],
+    final row = Semantics(
+      expanded: item.open,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(36, 8, 16, 8),
+          child: Row(
+            children: [
+              Chevron(open: item.open),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      item.note.isEmpty
+                          ? TextSpan(
+                              text: 'No note',
+                              style: TextStyle(
+                                color: muted,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            )
+                          : TextSpan(text: item.note),
+                      if (n > 1)
+                        TextSpan(
+                          text: '  ×$n',
+                          style: TextStyle(color: muted),
+                        ),
+                    ],
+                  ),
+                  style: theme.textTheme.bodyMedium,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                style: theme.textTheme.bodyMedium,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(width: 8),
-            _Sum(
-              entries: item.entries,
-              decimal: decimal,
-              style: theme.textTheme.bodyMedium,
-            ),
-          ],
+              const SizedBox(width: 8),
+              _Sum(
+                entries: item.entries,
+                decimal: decimal,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -489,45 +489,51 @@ class _Grid extends StatelessWidget {
 
         final rows = <Widget>[
           for (final c in sheet.rows) ...[
-            InkWell(
-              onTap: () => onToggle(c.id),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(
-                      color: scheme.outlineVariant.withValues(alpha: 0.5),
-                    ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: scheme.outlineVariant.withValues(alpha: 0.5),
                   ),
                 ),
-                child: cells(
-                  height: _rowH,
-                  days: c.days,
-                  total: c.total,
-                  style: numStyle,
-                  totalStyle: bold,
-                  tip: (i) => _clientTip(context, c, i),
-                  label: Row(
-                    children: [
-                      const SizedBox(width: 8),
-                      Chevron(open: expanded.contains(c.id)),
-                      const SizedBox(width: 4),
-                      CircleAvatar(
-                        radius: 6,
-                        backgroundColor: Color(
-                          c.client?.color ?? clientPalette.last,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          c.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
+              ),
+              child: cells(
+                height: _rowH,
+                days: c.days,
+                total: c.total,
+                style: numStyle,
+                totalStyle: bold,
+                tip: (i) => _clientTip(context, c, i),
+                // The name toggles the row; the cells show their tasks.
+                label: MergeSemantics(
+                  child: Semantics(
+                    expanded: expanded.contains(c.id),
+                    child: InkWell(
+                      onTap: () => onToggle(c.id),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          Chevron(open: expanded.contains(c.id)),
+                          const SizedBox(width: 4),
+                          CircleAvatar(
+                            radius: 6,
+                            backgroundColor: Color(
+                              c.client?.color ?? clientPalette.last,
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              c.name,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
