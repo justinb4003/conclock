@@ -126,14 +126,30 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        DropdownButton<int>(
-                          value: store.roundingMinutes,
-                          underline: const SizedBox(),
-                          items: [
+                        MenuAnchor(
+                          menuChildren: [
                             for (final m in roundingSteps)
-                              DropdownMenuItem(value: m, child: Text('$m min')),
+                              MenuItemButton(
+                                leadingIcon: Icon(
+                                  Icons.check,
+                                  color: m == store.roundingMinutes
+                                      ? null
+                                      : Colors.transparent,
+                                ),
+                                onPressed: () => store.setRoundingMinutes(m),
+                                child: Text('$m min'),
+                              ),
                           ],
-                          onChanged: (m) => store.setRoundingMinutes(m!),
+                          builder: (context, menu, _) => OutlinedButton.icon(
+                            onPressed: () =>
+                                menu.isOpen ? menu.close() : menu.open(),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: theme.colorScheme.onSurface,
+                            ),
+                            icon: const Icon(Icons.arrow_drop_down),
+                            iconAlignment: IconAlignment.end,
+                            label: Text('${store.roundingMinutes} min'),
+                          ),
                         ),
                       ],
                     ),
