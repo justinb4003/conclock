@@ -481,7 +481,6 @@ class _TaskField extends StatefulWidget {
     required this.onChanged,
     required this.onSubmitted,
     required this.onSelected,
-    required this.onNewTask,
   });
 
   final TextEditingController controller;
@@ -490,7 +489,6 @@ class _TaskField extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final VoidCallback onSubmitted;
   final ValueChanged<String> onSelected;
-  final VoidCallback? onNewTask;
 
   @override
   State<_TaskField> createState() => _TaskFieldState();
@@ -551,15 +549,7 @@ class _TaskFieldState extends State<_TaskField> {
               if (!_selected) widget.onSubmitted();
             },
             textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(
-              hintText: 'Task name…',
-              isDense: true,
-              prefixIcon: IconButton(
-                tooltip: 'New task',
-                onPressed: widget.onNewTask,
-                icon: const Icon(Icons.add_task, size: 18),
-              ),
-            ),
+            decoration: InputDecoration(hintText: 'Task name…', isDense: true),
           ),
         ),
     optionsViewBuilder: (context, onSelected, options) {
@@ -729,6 +719,15 @@ class _StatusPanel extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
+                            // Part of the task field as far as focus goes:
+                            // tapping it doesn't first commit the name.
+                            TextFieldTapRegion(
+                              child: IconButton(
+                                tooltip: 'New task',
+                                onPressed: onNewTask,
+                                icon: const Icon(Icons.add_task),
+                              ),
+                            ),
                             IconButton.filledTonal(
                               tooltip: 'Stop ${client?.name ?? ''}'.trim(),
                               onPressed: onStop,
@@ -744,7 +743,6 @@ class _StatusPanel extends StatelessWidget {
                           onChanged: onNoteChanged,
                           onSubmitted: onNoteSubmitted,
                           onSelected: onTaskSelected,
-                          onNewTask: onNewTask,
                         ),
                         const SizedBox(height: 4),
                         LiveBuilder(
