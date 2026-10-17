@@ -5,6 +5,7 @@ import '../backup/backup.dart';
 import '../desktop/desktop.dart';
 import '../models.dart';
 import '../store.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/data_location.dart';
 
@@ -77,10 +78,10 @@ class SettingsScreen extends StatelessWidget {
                         radius: 16,
                         backgroundColor: Color(c),
                         child: c == store.appColor
-                            ? const Icon(
+                            ? Icon(
                                 Icons.check,
                                 size: 18,
-                                color: Colors.white,
+                                color: checkColorOn(Color(c)),
                               )
                             : null,
                       ),

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../format.dart';
 import '../models.dart';
 import '../store.dart';
+import '../theme.dart';
 import '../tracking.dart';
 import '../widgets/common.dart';
 import '../widgets/dialogs.dart';
@@ -255,7 +256,7 @@ class _TrackerScreenState extends State<TrackerScreen> {
         : store.taskTotalIn(c.id, task, today, tomorrow, t);
     final row = _TrackRow(
       key: ValueKey(task == null ? c.id : '${c.id}/$task'),
-      color: Color(c.color),
+      colors: clientScheme(context, c.color),
       label: task ?? c.name,
       isTask: task != null,
       running: isRunning,
@@ -801,7 +802,7 @@ class _StatusPanel extends StatelessWidget {
 class _TrackRow extends StatelessWidget {
   const _TrackRow({
     super.key,
-    required this.color,
+    required this.colors,
     required this.label,
     required this.isTask,
     required this.running,
@@ -812,7 +813,8 @@ class _TrackRow extends StatelessWidget {
     this.onExpand,
   });
 
-  final Color color;
+  /// From the client's color.
+  final ColorScheme colors;
   final String label;
   final bool isTask;
   final bool running;
@@ -843,7 +845,7 @@ class _TrackRow extends StatelessWidget {
       dense: isTask,
       visualDensity: isTask ? VisualDensity.compact : null,
       selected: running,
-      selectedTileColor: color.withValues(alpha: isTask ? 0.08 : 0.12),
+      selectedTileColor: colors.primary.withValues(alpha: isTask ? 0.08 : 0.12),
       selectedColor: theme.colorScheme.onSurface,
       // Task play buttons line up under the client name.
       contentPadding: EdgeInsets.only(left: isTask ? 52 : 10, right: 16),
@@ -854,8 +856,10 @@ class _TrackRow extends StatelessWidget {
         visualDensity: isTask ? VisualDensity.compact : null,
         iconSize: isTask ? 16 : 24,
         style: IconButton.styleFrom(
-          backgroundColor: running ? color : color.withValues(alpha: 0.18),
-          foregroundColor: running ? Colors.white : color,
+          backgroundColor: running
+              ? colors.primary
+              : colors.primary.withValues(alpha: 0.12),
+          foregroundColor: running ? colors.onPrimary : colors.primary,
           minimumSize: Size.square(size),
           fixedSize: Size.square(size),
           padding: EdgeInsets.zero,

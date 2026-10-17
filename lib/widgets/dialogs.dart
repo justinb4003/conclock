@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models.dart';
 import '../store.dart';
+import '../theme.dart';
 
 Future<String?> promptText(
   BuildContext context, {
@@ -137,7 +138,7 @@ Future<int?> pickColor(BuildContext context, int current) {
                 radius: 20,
                 backgroundColor: Color(c),
                 child: c == current
-                    ? const Icon(Icons.check, color: Colors.white)
+                    ? Icon(Icons.check, color: checkColorOn(Color(c)))
                     : null,
               ),
             ),
