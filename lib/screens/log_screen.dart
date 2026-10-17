@@ -10,8 +10,8 @@ import '../widgets/task_menu.dart';
 
 /// One week's entries, grouped day → client → task → entries, or client →
 /// day → task → entries, with a sum at every level. Second-level rows start
-/// expanded, tasks collapsed; the unfold buttons collapse a group (or all
-/// of them). Tap an entry to edit. The week bar at the top and the buttons
+/// expanded, tasks collapsed; tapping a day (or client) collapses it, and
+/// the app bar's unfold button all of them. Tap an entry to edit. The week bar at the top and the buttons
 /// at the bottom move a week at a time.
 class LogScreen extends StatefulWidget {
   const LogScreen({super.key});
@@ -313,41 +313,41 @@ class _GroupHeader extends StatelessWidget {
       color: theme.colorScheme.primary,
     );
     final client = item.client;
-    final what = item.day == null ? 'client' : 'day';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 4, 0),
-      child: Row(
-        children: [
-          if (item.day == null) ...[
-            CircleAvatar(
-              radius: 6,
-              backgroundColor: Color(client?.color ?? clientPalette.last),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Text(
-              item.day == null
-                  ? client?.name ?? 'Unknown client'
-                  : MaterialLocalizations.of(context).formatFullDate(item.day!),
-              style: style,
-              overflow: TextOverflow.ellipsis,
+    return MergeSemantics(
+      child: Semantics(
+        expanded: item.open,
+        child: InkWell(
+          onTap: onToggle,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 14, 4, 6),
+            child: Row(
+              children: [
+                Chevron(open: item.open),
+                const SizedBox(width: 4),
+                if (item.day == null) ...[
+                  CircleAvatar(
+                    radius: 6,
+                    backgroundColor: Color(client?.color ?? clientPalette.last),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Text(
+                    item.day == null
+                        ? client?.name ?? 'Unknown client'
+                        : MaterialLocalizations.of(
+                            context,
+                          ).formatFullDate(item.day!),
+                    style: style,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                _Sum(entries: item.entries, decimal: decimal, style: style),
+                const SizedBox(width: _actionW),
+              ],
             ),
           ),
-          Semantics(
-            expanded: item.open,
-            child: IconButton(
-              tooltip: item.open ? 'Collapse $what' : 'Expand $what',
-              onPressed: onToggle,
-              iconSize: 18,
-              color: theme.colorScheme.onSurfaceVariant,
-              icon: Icon(item.open ? Icons.unfold_less : Icons.unfold_more),
-            ),
-          ),
-          const Spacer(),
-          _Sum(entries: item.entries, decimal: decimal, style: style),
-          const SizedBox(width: _actionW),
-        ],
+        ),
       ),
     );
   }
@@ -380,7 +380,7 @@ class _SubRow extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+            padding: const EdgeInsets.fromLTRB(36, 10, 4, 10),
             child: Row(
               children: [
                 Chevron(open: item.open),
@@ -433,7 +433,7 @@ class _TaskRow extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(36, 8, 0, 8),
+          padding: const EdgeInsets.fromLTRB(60, 8, 0, 8),
           child: Row(
             children: [
               Chevron(open: item.open),
@@ -523,7 +523,7 @@ class _EntryRow extends StatelessWidget {
     return InkWell(
       onTap: () => showEntryEditor(context, entry: e),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(66, 6, 4, 6),
+        padding: const EdgeInsets.fromLTRB(90, 6, 4, 6),
         child: Row(
           children: [
             Expanded(child: Text(range, style: timeStyle(context, style))),

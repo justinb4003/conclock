@@ -26,7 +26,7 @@ void main() {
     expect(find.text('Tuesday work'), findsOneWidget);
 
     // One day: the newest is listed first.
-    await tester.tap(find.byTooltip('Collapse day').first);
+    await tester.tap(find.text('Tuesday, October 13, 2026'));
     await tester.pump();
     expect(find.text('Tuesday work'), findsNothing);
     expect(find.text('Monday work'), findsOneWidget);
@@ -109,7 +109,7 @@ void main() {
     expect(y('Globex'), lessThan(y('Audit')));
     expect(find.text('1:00'), findsOneWidget); // Acme's week
 
-    await tester.tap(find.byTooltip('Collapse client').first);
+    await tester.tap(find.text('Acme').first); // the group
     await tester.pump();
     expect(find.text('Design'), findsNothing);
     expect(find.text('Audit'), findsOneWidget);

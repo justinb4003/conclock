@@ -896,14 +896,7 @@ class _TrackRow extends StatelessWidget {
                           ? 'Hide $name tasks'
                           : 'Show $name tasks',
                       onPressed: onExpand,
-                      icon: AnimatedRotation(
-                        turns: expanded! ? 0.5 : 0,
-                        duration: const Duration(milliseconds: 120),
-                        child: Icon(
-                          Icons.expand_more,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                      icon: Chevron(open: expanded!),
                     ),
                   ),
           ),
