@@ -53,6 +53,27 @@ class _TrackerScreenState extends State<TrackerScreen> {
     super.initState();
     // Committing the note (Enter / clicking away) adds it to the task list.
     _noteFocus.addListener(_onNoteFocus);
+    HardwareKeyboard.instance.addHandler(_onKey);
+  }
+
+  /// / or ? opens quick switch, unless a dialog is open or a text field
+  /// has focus (then the key types).
+  bool _onKey(KeyEvent e) {
+    if (e is! KeyDownEvent || (e.character != '/' && e.character != '?')) {
+      return false;
+    }
+    final keys = HardwareKeyboard.instance;
+    if (keys.isControlPressed || keys.isMetaPressed || keys.isAltPressed) {
+      return false;
+    }
+    final focus = FocusManager.instance.primaryFocus?.context;
+    if (!(ModalRoute.of(context)?.isCurrent ?? false) ||
+        StoreScope.of(context).recentClients.isEmpty ||
+        focus?.findAncestorWidgetOfExactType<EditableText>() != null) {
+      return false;
+    }
+    showQuickSwitch(context);
+    return true;
   }
 
   void _onNoteFocus() {
@@ -199,6 +220,7 @@ class _TrackerScreenState extends State<TrackerScreen> {
   void dispose() {
     _store?.removeListener(_syncNote);
     _note.dispose();
+    HardwareKeyboard.instance.removeHandler(_onKey);
     _noteFocus.dispose();
     _scroll.dispose();
     super.dispose();
@@ -331,7 +353,7 @@ class _TrackerScreenState extends State<TrackerScreen> {
           const HoursFormatToggle(),
           if (clients.isNotEmpty)
             IconButton(
-              tooltip: 'Quick switch',
+              tooltip: 'Quick switch (/)',
               onPressed: () => showQuickSwitch(context),
               icon: const Icon(Icons.search),
             ),

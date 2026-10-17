@@ -33,8 +33,8 @@ to switch.
   stops; older ones work their way down. Under each client, its recent tasks
   are listed newest first ("N more" shows the rest). The arrow on a client
   hides or shows its tasks; the button in the app bar does it for all.
-- **App bar**: **Quick switch** (search icon) to type a client or task name
-  and start it with Enter, **Add client**, and show/hide all tasks.
+- **App bar**: **Quick switch** (search icon, or press / or ?) to type a
+  client or task name and start it with Enter, **Add client**, and show/hide all tasks.
 - **Rename a task**: the pencil on the task (or right-click / long-press it).
   Renaming onto an existing name merges the two.
 
