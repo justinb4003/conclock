@@ -8,7 +8,8 @@ one JSON file.
   client (and task) slides to the top and stays there after it stops, so
   clients line up most recently used first; the arrow on a client hides its
   tasks.
-- **Log** — every entry grouped by day; tap to edit, + to add time manually.
+- **Log** — a week at a time, grouped by day or by client; tap an entry to
+  edit, + to add time manually.
 - **Timesheet** — Mon–Sun grid: clients down the side (expand for tasks), days
   across, row/day/week totals. Hover (or tap) a cell for that day's tasks;
   copy the week as tab-separated decimal hours for a spreadsheet. Optional

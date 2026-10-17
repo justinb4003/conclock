@@ -32,8 +32,6 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
 
   DateTime get _from => _week ??= weekStart(DateTime.now());
 
-  void _shift(int weeks) => setState(() => _week = addDays(_from, 7 * weeks));
-
   void _copy(_Sheet sheet) {
     final b = StringBuffer();
     String row(String client, String task, List<Duration> days, Duration t) =>
@@ -71,8 +69,6 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         running != null &&
         !running.start.isBefore(from) &&
         running.start.isBefore(to);
-    final loc = MaterialLocalizations.of(context);
-    final isCurrent = from == weekStart(DateTime.now());
     final allOpen = store.clients.every((c) => _expanded.contains(c.id));
 
     return LiveBuilder(
@@ -108,37 +104,10 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           ),
           body: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Row(
-                  children: [
-                    IconButton(
-                      tooltip: 'Previous week',
-                      onPressed: () => _shift(-1),
-                      icon: const Icon(Icons.chevron_left),
-                    ),
-                    Expanded(
-                      child: Text(
-                        '${loc.formatShortMonthDay(from)} – '
-                        '${loc.formatShortMonthDay(addDays(to, -1))}, '
-                        '${addDays(to, -1).year}',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.titleMedium,
-                      ),
-                    ),
-                    if (!isCurrent)
-                      TextButton(
-                        onPressed: () =>
-                            setState(() => _week = weekStart(DateTime.now())),
-                        child: const Text('This week'),
-                      ),
-                    IconButton(
-                      tooltip: 'Next week',
-                      onPressed: () => _shift(1),
-                      icon: const Icon(Icons.chevron_right),
-                    ),
-                  ],
-                ),
+              WeekBar(
+                from: from,
+                thisWeek: weekStart(DateTime.now()),
+                onChanged: (w) => setState(() => _week = w),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),

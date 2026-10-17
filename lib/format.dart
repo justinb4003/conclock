@@ -48,11 +48,3 @@ String fmtTime(BuildContext context, DateTime t) =>
       TimeOfDay.fromDateTime(t),
       alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
     );
-
-String fmtDay(BuildContext context, DateTime d) {
-  final today = dayStart(DateTime.now());
-  final day = dayStart(d);
-  if (day == today) return 'Today';
-  if (day == addDays(today, -1)) return 'Yesterday';
-  return MaterialLocalizations.of(context).formatFullDate(d);
-}

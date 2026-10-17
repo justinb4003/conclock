@@ -8,13 +8,11 @@ import '../widgets/entry_editor.dart';
 import '../widgets/live_builder.dart';
 import '../widgets/task_menu.dart';
 
-/// Entries grouped day → client → task → individual entries, with a sum at
-/// every level. Clients start expanded, tasks collapsed; the unfold buttons
-/// collapse a day (or all days) to client rows. Tap an entry to edit.
-///
-/// Shows a few weeks at a time (years of entries would make every rebuild
-/// slow and the list unscrollable): "Show older" reaches further back, and
-/// "Go to date" starts the list at an earlier day.
+/// One week's entries, grouped day → client → task → entries, or client →
+/// day → task → entries, with a sum at every level. Second-level rows start
+/// expanded, tasks collapsed; the unfold buttons collapse a group (or all
+/// of them). Tap an entry to edit. The week bar at the top and the buttons
+/// at the bottom move a week at a time.
 class LogScreen extends StatefulWidget {
   const LogScreen({super.key});
 
@@ -23,66 +21,69 @@ class LogScreen extends StatefulWidget {
 }
 
 class _LogScreenState extends State<LogScreen> {
-  // Static so expansion survives switching tabs during a session.
-  static final _collapsedClients = <String>{};
+  // Static so the week, grouping and expansion survive switching tabs.
+  static DateTime? _week;
+  static var _byClient = false;
+
+  /// Collapsed second-level rows and expanded tasks, keyed by day and
+  /// client, so they hold in either grouping.
+  static final _collapsed = <String>{};
   static final _expandedTasks = <String>{};
-
-  /// Weeks shown per step of "Show older".
-  static const _step = 4;
-
-  /// Last day shown, or null for the newest entries.
-  static DateTime? _upTo;
-  static int _weeks = _step;
 
   void _toggle(Set<String> set, String key) => setState(() {
     if (!set.remove(key)) set.add(key);
   });
 
-  /// Flattens the grouping into rows for a lazy ListView.
-  List<_Item> _items(AppStore store) {
-    final items = <_Item>[];
-    final upTo = _upTo;
-    final last = upTo ?? dayStart(store.now());
-    final from = addDays(last, 1 - 7 * _weeks);
-    if (upTo != null) items.add(_JumpedItem(upTo));
-    // Entries dated after today (rare, manual) still show in the newest view.
-    final to = upTo == null ? DateTime(9999) : addDays(upTo, 1);
-    final all = store.entriesIn(from, to).toList(); // newest first
-    var i = 0;
-    while (i < all.length) {
-      final day = dayStart(all[i].start);
-      final dayEntries = <Entry>[];
-      while (i < all.length && dayStart(all[i].start) == day) {
-        dayEntries.add(all[i++]);
-      }
-      final dayItem = _DayItem(day, dayEntries);
-      items.add(dayItem);
+  void _goTo(DateTime week) => setState(() => _week = week);
 
-      // Tasks keep newest-first order since entries arrive that way.
-      final byClient = <String, Map<String, List<Entry>>>{};
-      for (final e in dayEntries) {
-        byClient
-            .putIfAbsent(e.clientId, () => {})
-            .putIfAbsent(e.note.trim(), () => [])
-            .add(e);
-      }
-      for (final id in store.inClientOrder(byClient.keys)) {
-        final client = store.clientById(id);
-        final tasks = byClient[id]!;
-        final clientKey = '${fmtIsoDate(day)}|$id';
-        final open = !_collapsedClients.contains(clientKey);
-        dayItem.clientKeys.add(clientKey);
-        if (open) dayItem.open = true;
+  /// Flattens the week's grouping into rows for a lazy ListView.
+  List<_Item> _items(AppStore store, DateTime from) {
+    final week = store.entriesIn(from, addDays(from, 7)).toList();
+    // Entries come newest first; days and tasks keep that order.
+    final days = {for (final e in week) dayStart(e.start)}.toList();
+    final clients = store.inClientOrder({for (final e in week) e.clientId});
+    final items = <_Item>[];
+    for (final top in _byClient ? clients : days) {
+      bool inTop(Entry e) =>
+          _byClient ? e.clientId == top : dayStart(e.start) == top;
+      final topEntries = week.where(inTop).toList();
+      final group = _byClient
+          ? _GroupItem(topEntries, client: store.clientById(top as String))
+          : _GroupItem(topEntries, day: top as DateTime);
+      items.add(group);
+      final subs = _byClient
+          ? {for (final e in topEntries) dayStart(e.start)}.toList()
+          : store.inClientOrder({for (final e in topEntries) e.clientId});
+      for (final sub in subs) {
+        final day = _byClient ? sub as DateTime : top as DateTime;
+        final clientId = _byClient ? top as String : sub as String;
+        final entries = [
+          for (final e in topEntries)
+            if (e.clientId == clientId && dayStart(e.start) == day) e,
+        ];
+        final key = '${fmtIsoDate(day)}|$clientId';
+        final open = !_collapsed.contains(key);
+        group.subKeys.add(key);
+        if (open) group.open = true;
         items.add(
-          _ClientItem(clientKey, client, [
-            for (final list in tasks.values) ...list,
-          ], open),
+          _byClient
+              ? _SubItem(key, entries, open, day: day)
+              : _SubItem(
+                  key,
+                  entries,
+                  open,
+                  client: store.clientById(clientId),
+                ),
         );
         if (!open) continue;
+        final tasks = <String, List<Entry>>{};
+        for (final e in entries) {
+          tasks.putIfAbsent(e.note.trim(), () => []).add(e);
+        }
         for (final MapEntry(key: note, value: list) in tasks.entries) {
-          final taskKey = '$clientKey|$note';
+          final taskKey = '$key|$note';
           final taskOpen = _expandedTasks.contains(taskKey);
-          items.add(_TaskItem(taskKey, id, note, list, taskOpen));
+          items.add(_TaskItem(taskKey, clientId, note, list, taskOpen));
           if (taskOpen) {
             for (final e in list) {
               items.add(_EntryItem(e));
@@ -91,67 +92,39 @@ class _LogScreenState extends State<LogScreen> {
         }
       }
     }
-    if (store.hasEntriesBefore(from)) items.add(_OlderItem(from));
     return items;
   }
 
-  Future<void> _goToDate(AppStore store) async {
-    final today = dayStart(store.now());
-    final oldest = store.entries.isEmpty
-        ? today
-        : dayStart(store.entries.last.start);
-    final initial = _upTo ?? today;
-    final d = await showDatePicker(
-      context: context,
-      helpText: 'Show the log from',
-      initialDate: initial.isBefore(oldest) ? oldest : initial,
-      firstDate: oldest.isBefore(today) ? oldest : today,
-      lastDate: today,
-    );
-    if (d == null) return;
-    setState(() {
-      _upTo = d == today ? null : dayStart(d);
-      _weeks = _step;
-    });
-  }
-
-  void _backToLatest() => setState(() {
-    _upTo = null;
-    _weeks = _step;
-  });
-
-  /// Collapses [days] to their client rows, or expands them if none is open.
-  void _toggleDays(Iterable<_DayItem> days) => setState(() {
-    final keys = [for (final d in days) ...d.clientKeys];
-    if (days.any((d) => d.open)) {
-      _collapsedClients.addAll(keys);
+  /// Collapses [groups] to their second-level rows, or expands them if none
+  /// is open.
+  void _toggleGroups(Iterable<_GroupItem> groups) => setState(() {
+    final keys = [for (final g in groups) ...g.subKeys];
+    if (groups.any((g) => g.open)) {
+      _collapsed.addAll(keys);
     } else {
-      _collapsedClients.removeAll(keys);
+      _collapsed.removeAll(keys);
     }
   });
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final items = _items(store);
+    final theme = Theme.of(context);
+    final thisWeek = weekStart(store.now());
+    final from = _week ?? thisWeek;
+    final items = _items(store, from);
     final decimal = store.decimalHours;
-    final days = items.whereType<_DayItem>();
-    final anyOpen = days.any((d) => d.open);
+    final groups = items.whereType<_GroupItem>();
+    final anyOpen = groups.any((g) => g.open);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Log'),
         actions: [
-          if (store.entries.isNotEmpty)
-            IconButton(
-              tooltip: 'Go to date',
-              onPressed: () => _goToDate(store),
-              icon: const Icon(Icons.event_outlined),
-            ),
-          if (days.isNotEmpty)
+          if (groups.isNotEmpty)
             IconButton(
               tooltip: anyOpen ? 'Collapse all' : 'Expand all',
-              onPressed: () => _toggleDays(days),
+              onPressed: () => _toggleGroups(groups),
               icon: Icon(anyOpen ? Icons.unfold_less : Icons.unfold_more),
             ),
           const Padding(
@@ -165,44 +138,74 @@ class _LogScreenState extends State<LogScreen> {
         onPressed: () => showEntryEditor(context),
         child: const Icon(Icons.add),
       ),
-      body: store.entries.isEmpty
-          ? const Center(child: Text('No time tracked yet'))
-          : ListView.builder(
-              // Start at the top again after jumping.
-              key: ValueKey(_upTo),
-              padding: const EdgeInsets.only(bottom: 88),
-              itemCount: items.length,
-              itemBuilder: (context, i) => switch (items[i]) {
-                _DayItem item => _DayHeader(
-                  item: item,
-                  decimal: decimal,
-                  onToggle: () => _toggleDays([item]),
+      body: Column(
+        children: [
+          WeekBar(from: from, thisWeek: thisWeek, onChanged: _goTo),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  'Group by',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                _ClientItem item => _ClientRow(
-                  item: item,
-                  decimal: decimal,
-                  onTap: () => _toggle(_collapsedClients, item.key),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(value: false, label: Text('Day')),
+                    ButtonSegment(value: true, label: Text('Client')),
+                  ],
+                  selected: {_byClient},
+                  showSelectedIcon: false,
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onSelectionChanged: (s) =>
+                      setState(() => _byClient = s.first),
                 ),
-                _TaskItem item => _TaskRow(
-                  item: item,
-                  decimal: decimal,
-                  onTap: () => _toggle(_expandedTasks, item.key),
-                ),
-                _EntryItem item => _EntryRow(
-                  entry: item.entries.single,
-                  decimal: decimal,
-                ),
-                _JumpedItem item => _JumpedBanner(
-                  day: item.day,
-                  onBack: _backToLatest,
-                ),
-                _OlderItem item => _ShowOlder(
-                  from: item.from,
-                  empty: days.isEmpty,
-                  onTap: () => setState(() => _weeks += _step),
-                ),
-              },
+              ],
             ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              // A new week or grouping starts at the top.
+              key: ValueKey((from, _byClient)),
+              padding: const EdgeInsets.only(bottom: 88),
+              itemCount: items.length + 1,
+              itemBuilder: (context, i) => i == items.length
+                  ? _WeekFooter(
+                      empty: items.isEmpty,
+                      onShift: (weeks) => _goTo(addDays(from, 7 * weeks)),
+                    )
+                  : switch (items[i]) {
+                      _GroupItem item => _GroupHeader(
+                        item: item,
+                        decimal: decimal,
+                        onToggle: () => _toggleGroups([item]),
+                      ),
+                      _SubItem item => _SubRow(
+                        item: item,
+                        decimal: decimal,
+                        onTap: () => _toggle(_collapsed, item.key),
+                      ),
+                      _TaskItem item => _TaskRow(
+                        item: item,
+                        decimal: decimal,
+                        onTap: () => _toggle(_expandedTasks, item.key),
+                      ),
+                      _EntryItem item => _EntryRow(
+                        entry: item.entries.single,
+                        decimal: decimal,
+                      ),
+                    },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -216,20 +219,24 @@ sealed class _Item {
   final List<Entry> entries;
 }
 
-class _DayItem extends _Item {
-  _DayItem(this.day, super.entries);
+/// A day, or a client when grouping by client.
+class _GroupItem extends _Item {
+  _GroupItem(super.entries, {this.day, this.client});
 
-  final DateTime day;
-  final clientKeys = <String>[];
+  final DateTime? day;
+  final Client? client;
+  final subKeys = <String>[];
 
-  /// Any of the day's clients expanded.
+  /// Any of its rows expanded.
   bool open = false;
 }
 
-class _ClientItem extends _Item {
-  const _ClientItem(this.key, this.client, super.entries, this.open);
+/// A client within a day, or a day within a client.
+class _SubItem extends _Item {
+  const _SubItem(this.key, super.entries, this.open, {this.day, this.client});
 
   final String key;
+  final DateTime? day;
   final Client? client;
   final bool open;
 }
@@ -245,21 +252,6 @@ class _TaskItem extends _Item {
 
 class _EntryItem extends _Item {
   _EntryItem(Entry e) : super([e]);
-}
-
-/// Top of the list when it starts at an earlier date.
-class _JumpedItem extends _Item {
-  const _JumpedItem(this.day) : super(const []);
-
-  final DateTime day;
-}
-
-/// Bottom of the list while older entries exist.
-class _OlderItem extends _Item {
-  const _OlderItem(this.from) : super(const []);
-
-  /// First day shown.
-  final DateTime from;
 }
 
 // -------------------------------------------------------------------- rows
@@ -302,14 +294,14 @@ class _Sum extends StatelessWidget {
   }
 }
 
-class _DayHeader extends StatelessWidget {
-  const _DayHeader({
+class _GroupHeader extends StatelessWidget {
+  const _GroupHeader({
     required this.item,
     required this.decimal,
     required this.onToggle,
   });
 
-  final _DayItem item;
+  final _GroupItem item;
   final bool decimal;
   final VoidCallback onToggle;
 
@@ -319,13 +311,30 @@ class _DayHeader extends StatelessWidget {
     final style = theme.textTheme.titleSmall?.copyWith(
       color: theme.colorScheme.primary,
     );
+    final client = item.client;
+    final what = item.day == null ? 'client' : 'day';
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Row(
         children: [
-          Flexible(child: Text(fmtDay(context, item.day), style: style)),
+          if (item.day == null) ...[
+            CircleAvatar(
+              radius: 6,
+              backgroundColor: Color(client?.color ?? clientPalette.last),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Text(
+              item.day == null
+                  ? client?.name ?? 'Unknown client'
+                  : MaterialLocalizations.of(context).formatFullDate(item.day!),
+              style: style,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           IconButton(
-            tooltip: item.open ? 'Collapse day' : 'Expand day',
+            tooltip: item.open ? 'Collapse $what' : 'Expand $what',
             onPressed: onToggle,
             visualDensity: VisualDensity.compact,
             iconSize: 18,
@@ -340,14 +349,14 @@ class _DayHeader extends StatelessWidget {
   }
 }
 
-class _ClientRow extends StatelessWidget {
-  const _ClientRow({
+class _SubRow extends StatelessWidget {
+  const _SubRow({
     required this.item,
     required this.decimal,
     required this.onTap,
   });
 
-  final _ClientItem item;
+  final _SubItem item;
   final bool decimal;
   final VoidCallback onTap;
 
@@ -357,6 +366,10 @@ class _ClientRow extends StatelessWidget {
     final style = theme.textTheme.bodyLarge?.copyWith(
       fontWeight: FontWeight.w600,
     );
+    final day = item.day;
+    final label = day == null
+        ? item.client?.name ?? 'Unknown client'
+        : MaterialLocalizations.of(context).formatMediumDate(day);
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -365,17 +378,17 @@ class _ClientRow extends StatelessWidget {
           children: [
             Chevron(open: item.open),
             const SizedBox(width: 4),
-            CircleAvatar(
-              radius: 6,
-              backgroundColor: Color(item.client?.color ?? clientPalette.last),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                item.client?.name ?? 'Unknown client',
-                style: style,
-                overflow: TextOverflow.ellipsis,
+            if (day == null) ...[
+              CircleAvatar(
+                radius: 6,
+                backgroundColor: Color(
+                  item.client?.color ?? clientPalette.last,
+                ),
               ),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: Text(label, style: style, overflow: TextOverflow.ellipsis),
             ),
             _Sum(entries: item.entries, decimal: decimal, style: style),
           ],
@@ -487,72 +500,49 @@ class _EntryRow extends StatelessWidget {
   }
 }
 
-class _JumpedBanner extends StatelessWidget {
-  const _JumpedBanner({required this.day, required this.onBack});
+/// End of the list: nothing this week, or not, and the way to the weeks
+/// either side without scrolling back up.
+class _WeekFooter extends StatelessWidget {
+  const _WeekFooter({required this.empty, required this.onShift});
 
-  final DateTime day;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.secondaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Showing ${MaterialLocalizations.of(context).formatMediumDate(day)} '
-                'and earlier',
-                style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
-              ),
-            ),
-            TextButton.icon(
-              onPressed: onBack,
-              icon: const Icon(Icons.vertical_align_top, size: 18),
-              label: const Text('Back to latest'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ShowOlder extends StatelessWidget {
-  const _ShowOlder({
-    required this.from,
-    required this.empty,
-    required this.onTap,
-  });
-
-  final DateTime from;
-
-  /// Nothing tracked in the weeks shown so far.
   final bool empty;
-  final VoidCallback onTap;
+
+  /// Moves by this many weeks.
+  final ValueChanged<int> onShift;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final date = MaterialLocalizations.of(context).formatMediumDate(from);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Column(
         children: [
-          Text(
-            empty ? 'Nothing tracked since $date' : 'Showing since $date',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          if (empty) ...[
+            Text(
+              'Nothing tracked this week',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          OutlinedButton.icon(
-            onPressed: onTap,
-            icon: const Icon(Icons.expand_more),
-            label: const Text('Show older'),
+            const SizedBox(height: 16),
+          ],
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => onShift(-1),
+                icon: const Icon(Icons.chevron_left),
+                label: const Text('Previous week'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => onShift(1),
+                icon: const Icon(Icons.chevron_right),
+                iconAlignment: IconAlignment.end,
+                label: const Text('Next week'),
+              ),
+            ],
           ),
         ],
       ),

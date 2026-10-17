@@ -383,8 +383,6 @@ void main() {
       store.totalsIn(today, DateTime(2026, 10, 14), t)[c.id],
       const Duration(hours: 3),
     );
-    expect(store.hasEntriesBefore(today), isFalse);
-    expect(store.hasEntriesBefore(DateTime(2026, 10, 12, 10)), isTrue);
   });
 
   test('a failed save is reported and retried', () async {

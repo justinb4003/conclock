@@ -379,9 +379,6 @@ class AppStore extends ChangeNotifier {
   Iterable<Entry> entriesIn(DateTime from, DateTime to) =>
       entries.skip(_firstBefore(to)).takeWhile((e) => !e.start.isBefore(from));
 
-  /// Whether any entry started before [t].
-  bool hasEntriesBefore(DateTime t) => _firstBefore(t) < entries.length;
-
   /// Total time per client for entries that started in [from, to).
   Map<String, Duration> totalsIn(DateTime from, DateTime to, DateTime now) {
     final totals = <String, Duration>{};

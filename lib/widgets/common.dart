@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../format.dart';
 import '../store.dart';
 
 /// h:mm / Decimal switch for an app bar; the setting is shared app-wide.
@@ -56,3 +57,75 @@ TextStyle timeStyle(BuildContext context, [TextStyle? base]) {
 /// A time or duration inside running text, e.g. 'Today ' + timeSpan(…).
 TextSpan timeSpan(BuildContext context, String text) =>
     TextSpan(text: text, style: timeStyle(context));
+
+/// "‹ Oct 12 – Oct 18, 2026 [This week] ›" for screens showing one week.
+/// Tapping the dates picks any day and goes to its week.
+class WeekBar extends StatelessWidget {
+  const WeekBar({
+    super.key,
+    required this.from,
+    required this.thisWeek,
+    required this.onChanged,
+  });
+
+  /// Monday of the week shown, and of the current week.
+  final DateTime from;
+  final DateTime thisWeek;
+
+  /// Called with the Monday to show.
+  final ValueChanged<DateTime> onChanged;
+
+  Future<void> _pick(BuildContext context) async {
+    final d = await showDatePicker(
+      context: context,
+      helpText: 'Go to the week of',
+      initialDate: from,
+      firstDate: DateTime(2000),
+      lastDate: addDays(thisWeek, 365),
+    );
+    if (d != null) onChanged(weekStart(d));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final loc = MaterialLocalizations.of(context);
+    final last = addDays(from, 6);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Previous week',
+            onPressed: () => onChanged(addDays(from, -7)),
+            icon: const Icon(Icons.chevron_left),
+          ),
+          Expanded(
+            child: TextButton(
+              onPressed: () => _pick(context),
+              style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.onSurface,
+                textStyle: theme.textTheme.titleMedium,
+              ),
+              child: Text(
+                '${loc.formatShortMonthDay(from)} – '
+                '${loc.formatShortMonthDay(last)}, ${last.year}',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+          if (from != thisWeek)
+            TextButton(
+              onPressed: () => onChanged(thisWeek),
+              child: const Text('This week'),
+            ),
+          IconButton(
+            tooltip: 'Next week',
+            onPressed: () => onChanged(addDays(from, 7)),
+            icon: const Icon(Icons.chevron_right),
+          ),
+        ],
+      ),
+    );
+  }
+}

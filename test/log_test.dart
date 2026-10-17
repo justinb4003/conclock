@@ -1,5 +1,6 @@
 import 'package:conclock/main.dart';
 import 'package:conclock/store.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'store_test.dart' show MemoryStorage;
@@ -42,33 +43,75 @@ void main() {
     expect(find.text('Tuesday work'), findsOneWidget);
   });
 
-  testWidgets('shows recent weeks; "Show older" reaches back', (tester) async {
-    var t = DateTime(2026, 10, 12, 9);
+  testWidgets('one week at a time, from the top or the bottom', (tester) async {
+    var t = DateTime(2026, 10, 1, 9); // the week before last
     final store = AppStore(storage: MemoryStorage(), clock: () => t);
     final acme = store.addClient('Acme');
-    for (final (start, task) in [
-      (DateTime(2026, 6, 1, 9), 'June work'),
-      (DateTime(2026, 10, 1, 9), 'October work'),
-    ]) {
-      t = start;
-      store.toggle(acme.id, note: task);
-      t = t.add(const Duration(hours: 1));
-      store.stop();
-    }
-    t = DateTime(2026, 10, 12, 9);
+    store.toggle(acme.id, note: 'Old work');
+    t = t.add(const Duration(hours: 1));
+    store.stop();
+    t = DateTime(2026, 10, 14, 9);
+    store.toggle(acme.id, note: 'This week');
+    t = t.add(const Duration(hours: 1));
+    store.stop();
     await tester.pumpWidget(ConClockApp(store: store));
     await tester.pump();
     await tester.tap(find.text('Log').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('October work'), findsOneWidget);
-    expect(find.text('June work'), findsNothing);
-    for (var i = 0; i < 8 && find.text('June work').evaluate().isEmpty; i++) {
-      await tester.scrollUntilVisible(find.text('Show older'), 200);
-      await tester.tap(find.text('Show older'));
-      await tester.pump();
+    expect(find.text('This week'), findsOneWidget); // the task, no button
+    // Always the weekday and date, never "Today" or "Yesterday".
+    expect(find.text('Wednesday, October 14, 2026'), findsOneWidget);
+    expect(find.text('Old work'), findsNothing);
+
+    await tester.tap(find.byTooltip('Previous week'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nothing tracked this week'), findsOneWidget);
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Previous week'));
+    await tester.pumpAndSettle();
+    expect(find.text('Old work'), findsOneWidget);
+    expect(find.text('Sep 28 – Oct 4, 2026'), findsOneWidget);
+
+    // Back to the current week.
+    await tester.tap(find.widgetWithText(TextButton, 'This week'));
+    await tester.pumpAndSettle();
+    expect(find.text('Old work'), findsNothing);
+    expect(find.widgetWithText(TextButton, 'This week'), findsNothing);
+  });
+
+  testWidgets('group by client: client, then its days', (tester) async {
+    var t = DateTime(2026, 10, 12, 9);
+    final store = AppStore(storage: MemoryStorage(), clock: () => t);
+    final acme = store.addClient('Acme');
+    final globex = store.addClient('Globex');
+    for (final (day, c, task) in [
+      (12, acme, 'Design'),
+      (12, globex, 'Audit'),
+      (13, acme, 'Build'),
+    ]) {
+      t = DateTime(2026, 10, day, 9 + store.entries.length);
+      store.toggle(c.id, note: task);
+      t = t.add(const Duration(minutes: 30));
+      store.stop();
     }
-    expect(find.text('June work'), findsOneWidget);
-    expect(find.text('Show older'), findsNothing); // nothing older left
+    await tester.pumpWidget(ConClockApp(store: store));
+    await tester.pump();
+    await tester.tap(find.text('Log').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Client'));
+    await tester.pumpAndSettle();
+
+    double y(String text) => tester.getTopLeft(find.text(text).first).dy;
+    // Acme, with its two days (newest first), then Globex.
+    expect(y('Acme'), lessThan(y('Build')));
+    expect(y('Build'), lessThan(y('Design')));
+    expect(y('Design'), lessThan(y('Globex')));
+    expect(y('Globex'), lessThan(y('Audit')));
+    expect(find.text('1:00'), findsOneWidget); // Acme's week
+
+    await tester.tap(find.byTooltip('Collapse client').first);
+    await tester.pump();
+    expect(find.text('Design'), findsNothing);
+    expect(find.text('Audit'), findsOneWidget);
   });
 }
