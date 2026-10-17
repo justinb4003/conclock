@@ -65,11 +65,11 @@ universal (`.dmg`) and Android (`.apk`) as workflow artifacts. Pushes to
 `main` also deploy the web app to GitHub Pages:
 https://justinb4003.github.io/conclock/ (data stays in your browser; open
 tabs stay in sync). To release, bump `version:` in `pubspec.yaml`, then push
-a `v*` tag (e.g. `git tag v0.7.0 && git push origin v0.7.0`) to publish the
+a `v*` tag (e.g. `git tag v0.7.1 && git push origin v0.7.1`) to publish the
 builds as a GitHub release.
 
 ```sh
-sudo apt install ./conclock_0.7.0_amd64.deb   # installs to /opt/conclock
+sudo apt install ./conclock_0.7.1_amd64.deb   # installs to /opt/conclock
 tool/package_deb.sh                             # build the .deb locally
 ```
 
