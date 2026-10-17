@@ -1,7 +1,8 @@
 # ConClock
 
 A lean, local-only time tracker for consultants. No accounts, no network:
-one JSON file. Runs on Linux, Windows, macOS, Android and the web.
+one JSON file. Runs on Linux, Windows, macOS, Android and the web. Web
+version can be found here: https://justinb4003.github.io/conclock/
 
 See [USER_GUIDE.md](USER_GUIDE.md) for how to use it.
 
