@@ -48,3 +48,13 @@ String fmtTime(BuildContext context, DateTime t) =>
       TimeOfDay.fromDateTime(t),
       alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
     );
+
+/// Tue: the weekday part of the localized medium date ("Tue, Oct 14").
+String fmtWeekday(BuildContext context, DateTime d) {
+  final loc = MaterialLocalizations.of(context);
+  final day = loc
+      .formatMediumDate(d)
+      .replaceFirst(loc.formatShortMonthDay(d), '');
+  final trimmed = day.replaceAll(RegExp(r'^[\s,]+|[\s,]+$'), '');
+  return trimmed.isEmpty ? loc.formatMediumDate(d) : trimmed;
+}

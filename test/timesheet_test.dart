@@ -137,4 +137,25 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Migration'), findsOneWidget);
   });
+
+  testWidgets('weekday names come from the localizations', (tester) async {
+    late BuildContext context;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (c) {
+            context = c;
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+    expect(
+      [
+        for (var i = 12; i < 19; i++)
+          fmtWeekday(context, DateTime(2026, 10, i)),
+      ],
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    );
+  });
 }

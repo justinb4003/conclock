@@ -8,8 +8,6 @@ import '../widgets/common.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/live_builder.dart';
 
-const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
 const _dayW = 68.0;
 const _totalW = 76.0;
 const _minNameW = 150.0;
@@ -39,7 +37,8 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         'Client',
         'Task',
         for (var i = 0; i < 7; i++)
-          '${_weekdays[i]} ${fmtIsoDate(addDays(sheet.from, i))}',
+          '${fmtWeekday(context, addDays(sheet.from, i))} '
+              '${fmtIsoDate(addDays(sheet.from, i))}',
         'Total',
       ].join('\t'),
     );
@@ -281,9 +280,9 @@ class _Grid extends StatelessWidget {
   String _fmt(Duration d) =>
       d == Duration.zero ? '' : fmtHours(d, decimal: decimal);
 
-  String _dayName(BuildContext context, int i) =>
-      '${_weekdays[i]} '
-      '${MaterialLocalizations.of(context).formatShortMonthDay(addDays(sheet.from, i))}';
+  String _dayName(BuildContext context, int i) => MaterialLocalizations.of(
+    context,
+  ).formatMediumDate(addDays(sheet.from, i));
 
   String _actual(Duration shown, Duration raw) =>
       shown == raw ? '' : '  (actual ${_fmt(raw)})';
@@ -449,7 +448,8 @@ class _Grid extends StatelessWidget {
                     TextSpan(
                       children: [
                         TextSpan(
-                          text: '${_weekdays[i]}\n',
+                          text:
+                              '${fmtWeekday(context, addDays(sheet.from, i))}\n',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: i == todayCol
@@ -460,9 +460,9 @@ class _Grid extends StatelessWidget {
                           ),
                         ),
                         TextSpan(
-                          text:
-                              '${addDays(sheet.from, i).month}/'
-                              '${addDays(sheet.from, i).day}',
+                          text: MaterialLocalizations.of(
+                            context,
+                          ).formatShortMonthDay(addDays(sheet.from, i)),
                           style: TextStyle(color: scheme.onSurfaceVariant),
                         ),
                       ],
