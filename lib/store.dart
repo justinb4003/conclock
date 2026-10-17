@@ -530,6 +530,17 @@ class AppStore extends ChangeNotifier {
 
   Client? _liveClient(Client c) => clients.contains(c) ? c : clientById(c.id);
 
+  /// [clientId]'s task names, most recently started first, leaving out
+  /// [exceptEntryId]'s (the running entry, whose name is being typed).
+  List<String> taskNames(String clientId, {String? exceptEntryId}) {
+    final seen = <String>{};
+    return [
+      for (final e in entries)
+        if (e.clientId == clientId && e.id != exceptEntryId)
+          if (e.note.trim() case final n when n.isNotEmpty && seen.add(n)) n,
+    ];
+  }
+
   bool hasTask(String clientId, String task) =>
       entries.any((e) => e.clientId == clientId && e.note.trim() == task);
 

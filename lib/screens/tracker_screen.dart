@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../format.dart';
 import '../models.dart';
@@ -64,8 +65,48 @@ class _TrackerScreenState extends State<TrackerScreen> {
     setState(() {});
   }
 
-  /// Fixing a task's name in the field renames the task, not just this
-  /// entry, so a typo doesn't leave two tasks behind.
+  /// An earlier task on [clientId] named [name] apart from case, other than
+  /// [except]. Typing its name means that task.
+  String? _matchingTask(
+    String clientId,
+    String name,
+    String entryId, {
+    String? except,
+  }) {
+    final lower = name.toLowerCase();
+    for (final n in _store!.taskNames(clientId, exceptEntryId: entryId)) {
+      if (n != except && n.toLowerCase() == lower) return n;
+    }
+    return null;
+  }
+
+  /// Suggestions for the task field: the running client's earlier tasks
+  /// containing [query], any case; those starting with it first.
+  Iterable<String> _taskOptions(String query) {
+    final r = _store?.running;
+    final typed = query.trim();
+    final q = typed.toLowerCase();
+    if (r == null || q.isEmpty) return const [];
+    final names = [
+      for (final n in _store!.taskNames(r.clientId, exceptEntryId: r.id))
+        if (n != typed && n.toLowerCase().contains(q)) n,
+    ];
+    return [
+      ...names.where((n) => n.toLowerCase().startsWith(q)),
+      ...names.where((n) => !n.toLowerCase().startsWith(q)),
+    ].take(8);
+  }
+
+  /// Picking a suggestion makes the running entry that task.
+  void _taskSelected(String task) {
+    final r = _store?.running;
+    if (r != null) _store!.setNote(r, task);
+    _noteFocus.unfocus();
+  }
+
+  /// Committing the field's name. If it names an earlier task (any case),
+  /// this entry joins that task. Otherwise a changed name renames the task,
+  /// not just this entry, so fixing a typo doesn't leave two tasks behind.
   void _commitNote() {
     final id = _editEntryId;
     _editEntryId = null;
@@ -74,7 +115,13 @@ class _TrackerScreenState extends State<TrackerScreen> {
     if (store == null || e == null) return;
     final from = _editFrom;
     final to = e.note.trim();
-    if (from.isEmpty || to.isEmpty || to == from) return;
+    if (to.isEmpty) return;
+    final match = _matchingTask(e.clientId, to, e.id, except: from);
+    if (match != null) {
+      if (match != e.note) store.setNote(e, match);
+      return;
+    }
+    if (from.isEmpty || to == from) return;
     final others = [
       for (final x in store.entries)
         if (x.id != id && x.clientId == e.clientId) x,
@@ -107,7 +154,11 @@ class _TrackerScreenState extends State<TrackerScreen> {
     _editEntryId = null;
     final keep = from.isEmpty ? typed : from;
     if (keep.isEmpty) return;
-    final next = from.isNotEmpty && typed != from ? typed : '';
+    // A name typed over the current one (not just recased) is the next
+    // task, matched to an earlier task's spelling if it names one.
+    final next = from.isNotEmpty && typed.toLowerCase() != from.toLowerCase()
+        ? _matchingTask(r.clientId, typed, r.id) ?? typed
+        : '';
     if (typed != keep) store.setNote(r, keep);
     final started = store.toggle(r.clientId, note: next);
     if (next.isNotEmpty) {
@@ -299,6 +350,8 @@ class _TrackerScreenState extends State<TrackerScreen> {
                     onStop: _stop,
                     // Enter commits the note: it shows up as a running task.
                     onNoteSubmitted: () => setState(_noteFocus.unfocus),
+                    taskOptions: _taskOptions,
+                    onTaskSelected: _taskSelected,
                     onNewTask:
                         running != null &&
                             (running.note.trim().isNotEmpty ||
@@ -427,6 +480,148 @@ class _TrackerScreenState extends State<TrackerScreen> {
   }
 }
 
+/// The running entry's task name, suggesting the client's earlier tasks as
+/// you type. Tab takes the highlighted suggestion (the first, or the one
+/// picked with the arrow keys). Enter keeps what's typed unless the arrow
+/// keys were used, so a new name that's part of an old one isn't swapped
+/// out.
+class _TaskField extends StatefulWidget {
+  const _TaskField({
+    required this.controller,
+    required this.focusNode,
+    required this.options,
+    required this.onChanged,
+    required this.onSubmitted,
+    required this.onSelected,
+    required this.onNewTask,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final Iterable<String> Function(String query) options;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onSubmitted;
+  final ValueChanged<String> onSelected;
+  final VoidCallback? onNewTask;
+
+  @override
+  State<_TaskField> createState() => _TaskFieldState();
+}
+
+class _TaskFieldState extends State<_TaskField> {
+  /// Whether the arrow keys moved through the suggestions since the last
+  /// edit; only then does Enter take the highlighted one.
+  bool _navigated = false;
+  bool _selected = false;
+
+  /// Phones have no Tab key to hint at.
+  bool get _hasKeyboard =>
+      !(defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  @override
+  Widget build(BuildContext context) => RawAutocomplete<String>(
+    textEditingController: widget.controller,
+    focusNode: widget.focusNode,
+    optionsBuilder: (value) => widget.options(value.text),
+    onSelected: (task) {
+      _selected = true;
+      widget.onSelected(task);
+    },
+    fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) =>
+        Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onKeyEvent: (_, event) {
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
+            final key = event.logicalKey;
+            if (key == LogicalKeyboardKey.arrowDown ||
+                key == LogicalKeyboardKey.arrowUp) {
+              _navigated = true;
+            } else if (key == LogicalKeyboardKey.tab &&
+                !HardwareKeyboard.instance.isShiftPressed) {
+              // Takes the highlighted suggestion if any are showing;
+              // otherwise Tab moves focus as usual.
+              _selected = false;
+              onFieldSubmitted();
+              _navigated = false;
+              if (_selected) return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            onChanged: (v) {
+              _navigated = false;
+              widget.onChanged(v);
+            },
+            onSubmitted: (_) {
+              _selected = false;
+              if (_navigated) onFieldSubmitted();
+              _navigated = false;
+              if (!_selected) widget.onSubmitted();
+            },
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              hintText: 'Task name…',
+              isDense: true,
+              prefixIcon: IconButton(
+                tooltip: 'New task',
+                onPressed: widget.onNewTask,
+                icon: const Icon(Icons.add_task, size: 18),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 32,
+                minHeight: 0,
+              ),
+            ),
+          ),
+        ),
+    optionsViewBuilder: (context, onSelected, options) {
+      final highlighted = AutocompleteHighlightedOption.of(context);
+      return Align(
+        alignment: Alignment.topLeft,
+        child: Material(
+          elevation: 4,
+          borderRadius: BorderRadius.circular(8),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 240),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              shrinkWrap: true,
+              children: [
+                for (final (i, task) in options.indexed)
+                  ListTile(
+                    dense: true,
+                    title: Text(task),
+                    selected: i == highlighted,
+                    trailing: i == highlighted && _hasKeyboard
+                        ? Text(
+                            'Tab',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          )
+                        : null,
+                    onTap: () => onSelected(task),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 /// How long the status card takes to grow, shrink and cross-fade.
 const _panelAnim = Duration(milliseconds: 250);
 
@@ -440,6 +635,8 @@ class _StatusPanel extends StatelessWidget {
     required this.onNoteChanged,
     required this.onNoteSubmitted,
     required this.onNewTask,
+    required this.taskOptions,
+    required this.onTaskSelected,
     required this.todayTotal,
   });
 
@@ -453,6 +650,8 @@ class _StatusPanel extends StatelessWidget {
 
   /// Null when there's no named task to move on from.
   final VoidCallback? onNewTask;
+  final Iterable<String> Function(String query) taskOptions;
+  final ValueChanged<String> onTaskSelected;
   final Duration Function(DateTime now) todayTotal;
 
   @override
@@ -548,31 +747,14 @@ class _StatusPanel extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        TextField(
+                        _TaskField(
                           controller: note,
                           focusNode: noteFocus,
+                          options: taskOptions,
                           onChanged: onNoteChanged,
-                          onSubmitted: (_) => onNoteSubmitted(),
-                          textCapitalization: TextCapitalization.sentences,
-                          decoration: InputDecoration(
-                            hintText: 'Task name…',
-                            isDense: true,
-                            prefixIcon: IconButton(
-                              tooltip: 'New task',
-                              onPressed: onNewTask,
-                              icon: const Icon(Icons.add_task, size: 18),
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 28,
-                                minHeight: 28,
-                              ),
-                            ),
-                            prefixIconConstraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 0,
-                            ),
-                          ),
+                          onSubmitted: onNoteSubmitted,
+                          onSelected: onTaskSelected,
+                          onNewTask: onNewTask,
                         ),
                         const SizedBox(height: 4),
                         LiveBuilder(
