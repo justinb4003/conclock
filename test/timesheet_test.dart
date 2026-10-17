@@ -69,24 +69,15 @@ void main() {
     await tester.pump(const Duration(seconds: 1)); // let the save fire
   });
 
-  test('rounds up to the next half hour', () {
-    expect(roundUpHalfHour(Duration.zero), Duration.zero);
-    expect(
-      roundUpHalfHour(const Duration(minutes: 1)),
-      const Duration(minutes: 30),
-    );
-    expect(
-      roundUpHalfHour(const Duration(minutes: 30)),
-      const Duration(minutes: 30),
-    );
-    expect(
-      roundUpHalfHour(const Duration(minutes: 32)),
-      const Duration(hours: 1),
-    );
-    expect(
-      roundUpHalfHour(const Duration(minutes: 61)),
-      const Duration(minutes: 90),
-    );
+  test('rounds up to the next step', () {
+    Duration up(int m, int by) => roundUp(Duration(minutes: m), by);
+    expect(up(0, 30), Duration.zero);
+    expect(up(1, 30), const Duration(minutes: 30));
+    expect(up(30, 30), const Duration(minutes: 30));
+    expect(up(32, 30), const Duration(hours: 1));
+    expect(up(61, 30), const Duration(minutes: 90));
+    expect(up(7, 6), const Duration(minutes: 12));
+    expect(up(46, 15), const Duration(hours: 1));
   });
 
   testWidgets('rounding per task vs per day', (tester) async {
@@ -127,6 +118,15 @@ void main() {
     expect(find.text('1.50'), findsNothing);
     expect(find.text('0.53'), findsWidgets); // the call, exact
     expect(find.text('17.00'), findsOneWidget);
+
+    // By 15 minutes instead: 0:42 → 0:45.
+    await tester.tap(find.text('30 min'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('15 min').last);
+    await tester.pumpAndSettle();
+    expect(store.roundingMinutes, 15);
+    expect(find.text('0.75'), findsWidgets);
+    expect(find.text('16.75'), findsOneWidget);
     await tester.pump(const Duration(seconds: 1)); // let the save fire
   });
 

@@ -14,9 +14,10 @@ String fmtHm(Duration d) {
   return '${m ~/ 60}:${_two(m % 60)}';
 }
 
-/// Rounds up to the next half hour (0:32 → 1:00, 0:30 → 0:30).
-Duration roundUpHalfHour(Duration d) {
-  const step = 30 * 60;
+/// Rounds up to the next multiple of [minutes] (by 30: 0:32 → 1:00,
+/// 0:30 → 0:30).
+Duration roundUp(Duration d, int minutes) {
+  final step = minutes * 60;
   final s = d.inSeconds;
   return Duration(seconds: (s + step - 1) ~/ step * step);
 }

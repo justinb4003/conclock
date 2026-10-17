@@ -38,8 +38,11 @@ String colorName(int color) {
 }
 
 /// How the timesheet rounds hours: not at all, each task's daily time, or
-/// each client's daily total — always up to the next half hour.
+/// each client's daily total — up to the next [roundingSteps] multiple.
 enum Rounding { off, task, day }
+
+/// Minutes the timesheet can round up to (6 is a tenth of an hour).
+const roundingSteps = [6, 10, 15, 20, 30, 60];
 
 /// How strongly the app color shows in the background (Settings).
 enum Backdrop { neutral, tinted, bold }

@@ -12,7 +12,8 @@ See [USER_GUIDE.md](USER_GUIDE.md) for how to use it.
 - **Log**: one week at a time, grouped by day or by client; edit any entry,
   add time by hand.
 - **Timesheet**: a Mon-Sun grid of clients (and their tasks) by day, with
-  optional rounding up to the half hour and a copy-for-spreadsheet button.
+  optional rounding up (to 6, 10, 15, 20, 30 or 60 minutes) and a
+  copy-for-spreadsheet button.
 - **Clients**: add, rename, recolor, reorder, archive, delete.
 - **Settings**: theme and colors, time display, tray behavior, data
   location, backups, and the version and release date.

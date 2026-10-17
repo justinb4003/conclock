@@ -60,8 +60,9 @@ class AppStore extends ChangeNotifier {
   /// How much of [appColor] shows in the background.
   Backdrop background = Backdrop.neutral;
 
-  /// Timesheet rounding (up to the next half hour).
+  /// Timesheet rounding, up to the next [roundingMinutes].
   Rounding rounding = Rounding.off;
+  int roundingMinutes = 30;
 
   /// Desktop: closing the window hides it to the tray instead of quitting.
   bool closeToTray = true;
@@ -218,6 +219,8 @@ class AppStore extends ChangeNotifier {
     decimalHours = settings['decimalHours'] as bool? ?? false;
     rounding =
         Rounding.values.asNameMap()[settings['rounding']] ?? Rounding.off;
+    final step = settings['roundingMinutes'];
+    roundingMinutes = roundingSteps.contains(step) ? step as int : 30;
     themeMode =
         ThemeMode.values.asNameMap()[settings['theme']] ?? ThemeMode.system;
     appColor = settings['appColor'] as int? ?? defaultAppColor;
@@ -257,6 +260,7 @@ class AppStore extends ChangeNotifier {
     'settings': {
       'decimalHours': decimalHours,
       'rounding': rounding.name,
+      'roundingMinutes': roundingMinutes,
       'theme': themeMode.name,
       'appColor': appColor,
       'background': background.name,
@@ -488,6 +492,12 @@ class AppStore extends ChangeNotifier {
   void setRounding(Rounding v) {
     if (rounding == v) return;
     rounding = v;
+    _changed();
+  }
+
+  void setRoundingMinutes(int v) {
+    if (roundingMinutes == v) return;
+    roundingMinutes = v;
     _changed();
   }
 

@@ -92,6 +92,7 @@ void main() {
     store.setNote(store.running!, 'Kickoff "notes"');
     store.setDecimalHours(true);
     store.setRounding(Rounding.day);
+    store.setRoundingMinutes(15);
     await store.flush();
 
     final reloaded = AppStore(storage: storage);
@@ -101,6 +102,7 @@ void main() {
     expect(reloaded.running?.start, DateTime(2026, 10, 12, 9));
     expect(reloaded.decimalHours, isTrue);
     expect(reloaded.rounding, Rounding.day);
+    expect(reloaded.roundingMinutes, 15);
     expect(jsonDecode(storage.data!)['version'], 2);
   });
 

@@ -72,7 +72,13 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       enabled: live,
       interval: const Duration(seconds: 30),
       builder: (context, now) {
-        final sheet = _Sheet.build(store, from, now, store.rounding);
+        final sheet = _Sheet.build(
+          store,
+          from,
+          now,
+          store.rounding,
+          store.roundingMinutes,
+        );
         return Scaffold(
           appBar: AppBar(
             title: const Text('Timesheet'),
@@ -110,11 +116,26 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text(
-                      'Round up to ½ h',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Round up to',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        DropdownButton<int>(
+                          value: store.roundingMinutes,
+                          underline: const SizedBox(),
+                          items: [
+                            for (final m in roundingSteps)
+                              DropdownMenuItem(value: m, child: Text('$m min')),
+                          ],
+                          onChanged: (m) => store.setRoundingMinutes(m!),
+                        ),
+                      ],
                     ),
                     SegmentedButton<Rounding>(
                       segments: const [
@@ -219,6 +240,7 @@ class _Sheet {
     DateTime from,
     DateTime now,
     Rounding rounding,
+    int minutes,
   ) {
     final byClient = <String, _ClientLine>{};
     // Oldest first so tooltip entries read chronologically.
@@ -241,7 +263,7 @@ class _Sheet {
     for (final r in rows) {
       for (final t in r._tasks.values) {
         t.days = rounding == Rounding.task
-            ? t.raw.map(roundUpHalfHour).toList()
+            ? [for (final d in t.raw) roundUp(d, minutes)]
             : t.raw;
       }
       r.tasks = r._tasks.values.toList()
@@ -252,7 +274,7 @@ class _Sheet {
           Rounding.off => r.raw[i],
           // Client cell = sum of its rounded task cells.
           Rounding.task => r.tasks.fold(Duration.zero, (a, t) => a + t.days[i]),
-          Rounding.day => roundUpHalfHour(r.raw[i]),
+          Rounding.day => roundUp(r.raw[i], minutes),
         },
       );
     }

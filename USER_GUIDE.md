@@ -66,9 +66,10 @@ day and the week.
 - Expand a client (or all of them) to see its tasks.
 - Hover or tap a cell (or tab to it and press Enter) to see that day's
   tasks for the client.
-- **Round up to 1/2 h**: **Off** shows exact time. **Per task** rounds each
-  task's day up to the next half hour. **Per day** rounds each client's day
-  total up to the next half hour.
+- **Round up to**: pick the step (6, 10, 15, 20, 30 or 60 minutes; 30 to
+  start). **Off** shows exact time. **Per task** rounds each task's day up
+  to the next step. **Per day** rounds each client's day total up to the
+  next step.
 - **Copy week for a spreadsheet** copies the grid as tab-separated decimal
   hours, ready to paste.
 
