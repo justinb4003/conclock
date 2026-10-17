@@ -147,7 +147,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
               ),
               Expanded(
                 child: sheet.rows.isEmpty
-                    ? const Center(child: Text('No time this week'))
+                    ? const Center(child: Text('Nothing tracked this week'))
                     : _Grid(
                         sheet: sheet,
                         now: now,

@@ -680,7 +680,7 @@ class _StatusPanel extends StatelessWidget {
                         Text.rich(
                           TextSpan(
                             children: [
-                              const TextSpan(text: 'Time Today '),
+                              const TextSpan(text: 'Today '),
                               timeSpan(
                                 context,
                                 fmtHm(todayTotal(DateTime.now())),
@@ -768,7 +768,7 @@ class _StatusPanel extends StatelessWidget {
                                 Text.rich(
                                   TextSpan(
                                     children: [
-                                      const TextSpan(text: 'Time Today '),
+                                      const TextSpan(text: 'Today '),
                                       timeSpan(context, fmtHm(todayTotal(now))),
                                     ],
                                   ),
