@@ -122,6 +122,25 @@ void main() {
     expect(reloaded.background, Backdrop.bold);
   });
 
+  testWidgets('about links to the source code', (tester) async {
+    final store = AppStore(storage: MemoryStorage());
+    await tester.pumpWidget(ConClockApp(store: store));
+    await tester.tap(find.text('Settings').last);
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Source code'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(
+      find.text('Source code'),
+    ); // clear of the nav bar
+    await tester.pumpAndSettle();
+    expect(find.text('github.com/justinb4003/conclock'), findsOneWidget);
+    expect(find.byIcon(Icons.open_in_new), findsOneWidget);
+  });
+
   testWidgets('dyslexia-friendly font', (tester) async {
     final storage = MemoryStorage();
     final store = AppStore(storage: storage);

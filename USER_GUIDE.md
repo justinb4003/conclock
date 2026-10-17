@@ -95,7 +95,8 @@ history).
 - **Desktop**: **Keep running in tray when closed**. When on, closing the
   window leaves ConClock in the tray; the tray menu shows what's running and
   can stop, start a client, reopen or quit.
-- **About**: the version and release date.
+- **About**: the version and release date, and a link to ConClock's source
+  code on GitHub.
 
 ## How do I...
 

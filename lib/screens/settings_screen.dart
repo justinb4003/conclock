@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../app_info.dart';
 import '../backup/backup.dart';
@@ -8,6 +9,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/data_location.dart';
+import '../widgets/dialogs.dart';
 
 /// App-wide options, plus data location, backups and the app version.
 class SettingsScreen extends StatelessWidget {
@@ -156,6 +158,7 @@ class SettingsScreen extends StatelessWidget {
           ],
           header('About'),
           const _AboutTile(),
+          const _SourceCodeTile(),
         ],
       ),
     );
@@ -189,6 +192,35 @@ class _AboutTileState extends State<_AboutTile> {
                     '${MaterialLocalizations.of(context).formatFullDate(released)}',
         ),
       ),
+    );
+  }
+}
+
+const _repoUrl = 'https://github.com/justinb4003/conclock';
+
+/// Opens the project's GitHub page in the browser.
+class _SourceCodeTile extends StatelessWidget {
+  const _SourceCodeTile();
+
+  Future<void> _open(BuildContext context) async {
+    var opened = false;
+    try {
+      opened = await launchUrl(
+        Uri.parse(_repoUrl),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {}
+    if (!opened && context.mounted) toast(context, 'Couldn’t open the link');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.code),
+      title: const Text('Source code'),
+      subtitle: const Text('github.com/justinb4003/conclock'),
+      trailing: const Icon(Icons.open_in_new),
+      onTap: () => _open(context),
     );
   }
 }
