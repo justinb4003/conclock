@@ -268,6 +268,9 @@ class _TrackerScreenState extends State<TrackerScreen> {
       onExpand: expanded == null
           ? null
           : () => store.setCollapsed([c.id], expanded),
+      action: task == null
+          ? null
+          : TaskRenameButton(clientId: c.id, task: task),
     );
     if (task == null) return row;
     return TaskMenuRegion(
@@ -806,6 +809,7 @@ class _TrackRow extends StatelessWidget {
     required this.onTap,
     this.expanded,
     this.onExpand,
+    this.action,
   });
 
   /// From the client's color.
@@ -823,6 +827,9 @@ class _TrackRow extends StatelessWidget {
   /// Client rows with tasks: whether they're shown, and the toggle.
   final bool? expanded;
   final VoidCallback? onExpand;
+
+  /// Task rows: the button in the expand button's place (rename).
+  final Widget? action;
 
   /// Room for the expand button, kept on every row so totals line up.
   static const _expandW = 48.0;
@@ -888,7 +895,7 @@ class _TrackRow extends StatelessWidget {
           SizedBox(
             width: _expandW,
             child: onExpand == null
-                ? null
+                ? action
                 : Semantics(
                     expanded: expanded,
                     child: IconButton(

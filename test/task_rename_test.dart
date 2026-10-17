@@ -75,4 +75,22 @@ void main() {
     expect(find.text('Renamed 1 entry'), findsOneWidget);
     await tester.pump(const Duration(seconds: 5)); // let the snackbar go
   });
+
+  testWidgets('the rename button on a Track task', (tester) async {
+    add('Sprint planing', 9);
+    await tester.pumpWidget(
+      StoreScope(
+        store: store,
+        child: const MaterialApp(home: TrackerScreen()),
+      ),
+    );
+    await tester.tap(find.byTooltip('Rename Sprint planing'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Sprint planning');
+    await tester.tap(find.text('Rename'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sprint planning'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5)); // let the snackbar go
+  });
 }

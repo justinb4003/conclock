@@ -72,3 +72,29 @@ Future<void> renameTask(
     undo: undo,
   );
 }
+
+/// The visible way to rename a task (or name a day's unnamed entries):
+/// right-click and long-press aren't discoverable, or reachable by
+/// keyboard.
+class TaskRenameButton extends StatelessWidget {
+  const TaskRenameButton({
+    super.key,
+    required this.clientId,
+    required this.task,
+    this.only,
+  });
+
+  final String clientId;
+  final String task;
+  final Iterable<Entry>? only;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    tooltip: task.isEmpty ? 'Name these entries' : 'Rename $task',
+    onPressed: () =>
+        renameTask(context, clientId: clientId, task: task, only: only),
+    iconSize: 18,
+    color: Theme.of(context).colorScheme.onSurfaceVariant,
+    icon: const Icon(Icons.edit_outlined),
+  );
+}

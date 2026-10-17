@@ -94,7 +94,7 @@ void main() {
     expect(find.text('Kickoff'), findsOneWidget);
     await tester.tap(find.text('Kickoff'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.edit_outlined).first);
+    await tester.tap(find.textContaining('AM –').first); // its entry
     await tester.pumpAndSettle();
     expect(find.text('Edit time'), findsOneWidget);
     await tester.tap(find.text('Cancel'));

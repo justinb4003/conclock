@@ -253,6 +253,10 @@ class _EntryItem extends _Item {
 
 // -------------------------------------------------------------------- rows
 
+/// The column at the end of each row for its button (rename on tasks),
+/// kept on every row so the sums line up.
+const _actionW = 48.0;
+
 /// Sum of [entries], ticking while one of them is running.
 class _Sum extends StatelessWidget {
   const _Sum({
@@ -311,7 +315,7 @@ class _GroupHeader extends StatelessWidget {
     final client = item.client;
     final what = item.day == null ? 'client' : 'day';
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 12, 4, 0),
       child: Row(
         children: [
           if (item.day == null) ...[
@@ -342,6 +346,7 @@ class _GroupHeader extends StatelessWidget {
           ),
           const Spacer(),
           _Sum(entries: item.entries, decimal: decimal, style: style),
+          const SizedBox(width: _actionW),
         ],
       ),
     );
@@ -375,7 +380,7 @@ class _SubRow extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 16, 10),
+            padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
             child: Row(
               children: [
                 Chevron(open: item.open),
@@ -397,6 +402,7 @@ class _SubRow extends StatelessWidget {
                   ),
                 ),
                 _Sum(entries: item.entries, decimal: decimal, style: style),
+                const SizedBox(width: _actionW),
               ],
             ),
           ),
@@ -427,7 +433,7 @@ class _TaskRow extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(36, 8, 16, 8),
+          padding: const EdgeInsets.fromLTRB(36, 8, 0, 8),
           child: Row(
             children: [
               Chevron(open: item.open),
@@ -468,15 +474,32 @@ class _TaskRow extends StatelessWidget {
         ),
       ),
     );
-    // "No note" is per-day: naming it names just this day's entries. One
-    // node for screen readers: the name, the total, tap and long-press.
-    return MergeSemantics(
-      child: TaskMenuRegion(
-        clientId: item.clientId,
-        task: item.note,
-        only: item.note.isEmpty ? item.entries : null,
-        child: row,
-      ),
+    // "No note" is per-day: naming it names just this day's entries.
+    final only = item.note.isEmpty ? item.entries : null;
+    return Row(
+      children: [
+        // One node for screen readers: the name, the total, tap and
+        // long-press.
+        Expanded(
+          child: MergeSemantics(
+            child: TaskMenuRegion(
+              clientId: item.clientId,
+              task: item.note,
+              only: only,
+              child: row,
+            ),
+          ),
+        ),
+        SizedBox(
+          width: _actionW,
+          child: TaskRenameButton(
+            clientId: item.clientId,
+            task: item.note,
+            only: only,
+          ),
+        ),
+        const SizedBox(width: 4),
+      ],
     );
   }
 }
@@ -500,13 +523,15 @@ class _EntryRow extends StatelessWidget {
     return InkWell(
       onTap: () => showEntryEditor(context, entry: e),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(66, 6, 16, 6),
+        padding: const EdgeInsets.fromLTRB(66, 6, 4, 6),
         child: Row(
           children: [
             Expanded(child: Text(range, style: timeStyle(context, style))),
-            Icon(Icons.edit_outlined, size: 14, color: style?.color),
-            const SizedBox(width: 8),
             _Sum(entries: [e], decimal: decimal, style: style, seconds: true),
+            SizedBox(
+              width: _actionW,
+              child: Icon(Icons.edit_outlined, size: 18, color: style?.color),
+            ),
           ],
         ),
       ),
