@@ -86,9 +86,8 @@ void main() {
 
     await tester.tap(find.text('Log').last);
     await tester.pump();
-    await tester.tap(find.text('Decimal'));
+    store.setDecimalHours(true); // Settings → Decimal hours
     await tester.pump();
-    expect(store.decimalHours, isTrue);
 
     // Day → client → task → entry: expand the task, open its entry.
     expect(find.text('Kickoff'), findsOneWidget);

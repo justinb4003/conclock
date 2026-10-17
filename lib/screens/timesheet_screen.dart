@@ -94,10 +94,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                 onPressed: sheet.rows.isEmpty ? null : () => _copy(sheet),
                 icon: const Icon(Icons.content_copy),
               ),
-              const Padding(
-                padding: EdgeInsets.only(left: 4, right: 12),
-                child: HoursFormatToggle(),
-              ),
+              const SizedBox(width: 8),
             ],
           ),
           body: Column(

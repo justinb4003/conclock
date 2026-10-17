@@ -5,25 +5,6 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 
-/// h:mm / Decimal switch for an app bar; the setting is shared app-wide.
-class HoursFormatToggle extends StatelessWidget {
-  const HoursFormatToggle({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final store = StoreScope.of(context);
-    return SegmentedButton<bool>(
-      segments: const [
-        ButtonSegment(value: false, label: Text('h:mm')),
-        ButtonSegment(value: true, label: Text('Decimal')),
-      ],
-      selected: {store.decimalHours},
-      showSelectedIcon: false,
-      onSelectionChanged: (s) => store.setDecimalHours(s.first),
-    );
-  }
-}
-
 /// Expand/collapse indicator: points right when closed, down when open.
 class Chevron extends StatelessWidget {
   const Chevron({super.key, required this.open});

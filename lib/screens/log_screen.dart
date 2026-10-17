@@ -127,10 +127,7 @@ class _LogScreenState extends State<LogScreen> {
               onPressed: () => _toggleGroups(groups),
               icon: Icon(anyOpen ? Icons.unfold_less : Icons.unfold_more),
             ),
-          const Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: HoursFormatToggle(),
-          ),
+          const SizedBox(width: 8),
         ],
       ),
       floatingActionButton: FloatingActionButton(
