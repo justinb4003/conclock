@@ -427,6 +427,9 @@ class _TrackerScreenState extends State<TrackerScreen> {
   }
 }
 
+/// How long the status card takes to grow, shrink and cross-fade.
+const _panelAnim = Duration(milliseconds: 250);
+
 class _StatusPanel extends StatelessWidget {
   const _StatusPanel({
     required this.running,
@@ -463,120 +466,151 @@ class _StatusPanel extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
       clipBehavior: Clip.antiAlias,
-      child: Container(
+      // Starting or stopping changes the card's layout: grow or shrink to
+      // it while the contents cross-fade, rather than jumping.
+      child: AnimatedContainer(
+        duration: _panelAnim,
+        curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           border: Border(left: BorderSide(color: color, width: 6)),
         ),
         padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-        child: r == null
-            ? Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Not tracking — tap a client to start',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  Text.rich(
-                    TextSpan(
+        child: AnimatedSize(
+          duration: _panelAnim,
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: AnimatedSwitcher(
+            duration: _panelAnim,
+            // Sized by the incoming layout alone, so the card shrinks on
+            // stop while the old contents fade (clipped), not after.
+            layoutBuilder: (current, previous) => Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (final p in previous)
+                  Positioned(key: p.key, left: 0, right: 0, top: 0, child: p),
+                ?current,
+              ],
+            ),
+            child: KeyedSubtree(
+              key: ValueKey(r == null),
+              child: r == null
+                  ? Row(
                       children: [
-                        const TextSpan(text: 'Time Today '),
-                        timeSpan(context, fmtHm(todayTotal(DateTime.now()))),
+                        Expanded(
+                          child: Text(
+                            'Not tracking — press ▶ on a client to start',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              const TextSpan(text: 'Time Today '),
+                              timeSpan(
+                                context,
+                                fmtHm(todayTotal(DateTime.now())),
+                              ),
+                            ],
+                          ),
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                client?.name ?? '?',
+                                style: theme.textTheme.titleLarge,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            LiveBuilder(
+                              builder: (context, now) => Text(
+                                fmtClock(r.durationAt(now)),
+                                style: timeStyle(
+                                  context,
+                                  theme.textTheme.headlineSmall,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton.filledTonal(
+                              tooltip: 'Stop',
+                              onPressed: onStop,
+                              icon: const Icon(Icons.stop),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        TextField(
+                          controller: note,
+                          focusNode: noteFocus,
+                          onChanged: onNoteChanged,
+                          onSubmitted: (_) => onNoteSubmitted(),
+                          textCapitalization: TextCapitalization.sentences,
+                          decoration: InputDecoration(
+                            hintText: 'Task name…',
+                            isDense: true,
+                            prefixIcon: IconButton(
+                              tooltip: 'New task',
+                              onPressed: onNewTask,
+                              icon: const Icon(Icons.add_task, size: 18),
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 28,
+                                minHeight: 28,
+                              ),
+                            ),
+                            prefixIconConstraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 0,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        LiveBuilder(
+                          builder: (context, now) => DefaultTextStyle.merge(
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            child: Row(
+                              children: [
+                                Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      const TextSpan(text: 'Started '),
+                                      timeSpan(
+                                        context,
+                                        fmtTime(context, r.start),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      const TextSpan(text: 'Time Today '),
+                                      timeSpan(context, fmtHm(todayTotal(now))),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                ],
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          client?.name ?? '?',
-                          style: theme.textTheme.titleLarge,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      LiveBuilder(
-                        builder: (context, now) => Text(
-                          fmtClock(r.durationAt(now)),
-                          style: timeStyle(
-                            context,
-                            theme.textTheme.headlineSmall,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton.filledTonal(
-                        tooltip: 'Stop',
-                        onPressed: onStop,
-                        icon: const Icon(Icons.stop),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  TextField(
-                    controller: note,
-                    focusNode: noteFocus,
-                    onChanged: onNoteChanged,
-                    onSubmitted: (_) => onNoteSubmitted(),
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: InputDecoration(
-                      hintText: 'Task name…',
-                      isDense: true,
-                      prefixIcon: IconButton(
-                        tooltip: 'New task',
-                        onPressed: onNewTask,
-                        icon: const Icon(Icons.add_task, size: 18),
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 28,
-                          minHeight: 28,
-                        ),
-                      ),
-                      prefixIconConstraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 0,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  LiveBuilder(
-                    builder: (context, now) => DefaultTextStyle.merge(
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      child: Row(
-                        children: [
-                          Text.rich(
-                            TextSpan(
-                              children: [
-                                const TextSpan(text: 'Started '),
-                                timeSpan(context, fmtTime(context, r.start)),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          Text.rich(
-                            TextSpan(
-                              children: [
-                                const TextSpan(text: 'Time Today '),
-                                timeSpan(context, fmtHm(todayTotal(now))),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            ),
+          ),
+        ),
       ),
     );
   }

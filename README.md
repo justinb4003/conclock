@@ -3,7 +3,7 @@
 A lean, local-only time tracker for consultants. No accounts, no network —
 one JSON file.
 
-- **Track** — tap a client to start; tap another to switch; tap again (or ■) to stop.
+- **Track** — press ▶ on a client to start; ▶ on another to switch; ■ to stop.
   Type a note for the running entry right in the status panel. The running
   client (and task) slides to the top and stays there after it stops, so
   clients line up most recently used first; the arrow on a client hides its

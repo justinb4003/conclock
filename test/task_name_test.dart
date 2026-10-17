@@ -77,6 +77,7 @@ void main() {
 
     store.toggle(acme.id);
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300)); // the card grows
     // Nothing named yet to move on from.
     expect(
       tester
