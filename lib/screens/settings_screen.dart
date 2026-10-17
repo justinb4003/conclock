@@ -5,7 +5,6 @@ import '../backup/backup.dart';
 import '../desktop/desktop.dart';
 import '../models.dart';
 import '../store.dart';
-import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/data_location.dart';
 
@@ -67,24 +66,12 @@ class SettingsScreen extends StatelessWidget {
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
                 children: [
                   for (final c in clientPalette)
-                    InkWell(
-                      customBorder: const CircleBorder(),
+                    ColorChoice(
+                      color: c,
+                      selected: c == store.appColor,
                       onTap: () => store.setAppColor(c),
-                      child: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Color(c),
-                        child: c == store.appColor
-                            ? Icon(
-                                Icons.check,
-                                size: 18,
-                                color: checkColorOn(Color(c)),
-                              )
-                            : null,
-                      ),
                     ),
                 ],
               ),

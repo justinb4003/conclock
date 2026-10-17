@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../format.dart';
+import '../models.dart';
 import '../store.dart';
+import '../theme.dart';
 
 /// h:mm / Decimal switch for an app bar; the setting is shared app-wide.
 class HoursFormatToggle extends StatelessWidget {
@@ -128,4 +130,51 @@ class WeekBar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// One palette color to pick: a 48px target, named in its tooltip (for
+/// screen readers, and for anyone who can't tell the colors apart).
+class ColorChoice extends StatelessWidget {
+  const ColorChoice({
+    super.key,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+    this.radius = 16,
+  });
+
+  final int color;
+  final bool selected;
+  final VoidCallback onTap;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    inMutuallyExclusiveGroup: true,
+    child: Tooltip(
+      message: colorName(color),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox.square(
+          dimension: radius * 2 < 48 ? 48 : radius * 2,
+          child: Center(
+            child: CircleAvatar(
+              radius: radius,
+              backgroundColor: Color(color),
+              child: selected
+                  ? Icon(
+                      Icons.check,
+                      size: radius * 1.1,
+                      color: checkColorOn(Color(color)),
+                    )
+                  : null,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }

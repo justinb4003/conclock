@@ -16,6 +16,27 @@ const clientPalette = <int>[
   0xFF546E7A, // blue grey
 ];
 
+const _paletteNames = [
+  'Blue',
+  'Green',
+  'Red',
+  'Orange',
+  'Purple',
+  'Cyan',
+  'Pink',
+  'Brown',
+  'Indigo',
+  'Light green',
+  'Yellow',
+  'Blue grey',
+];
+
+/// What to call [color] to someone who can't see it.
+String colorName(int color) {
+  final i = clientPalette.indexOf(color);
+  return i < 0 ? 'Custom color' : _paletteNames[i];
+}
+
 /// How the timesheet rounds hours: not at all, each task's daily time, or
 /// each client's daily total — always up to the next half hour.
 enum Rounding { off, task, day }

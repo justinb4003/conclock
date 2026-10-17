@@ -457,12 +457,15 @@ class _TaskRow extends StatelessWidget {
         ),
       ),
     );
-    // "No note" is per-day: naming it names just this day's entries.
-    return TaskMenuRegion(
-      clientId: item.clientId,
-      task: item.note,
-      only: item.note.isEmpty ? item.entries : null,
-      child: row,
+    // "No note" is per-day: naming it names just this day's entries. One
+    // node for screen readers: the name, the total, tap and long-press.
+    return MergeSemantics(
+      child: TaskMenuRegion(
+        clientId: item.clientId,
+        task: item.note,
+        only: item.note.isEmpty ? item.entries : null,
+        child: row,
+      ),
     );
   }
 }

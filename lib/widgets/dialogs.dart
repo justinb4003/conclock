@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models.dart';
 import '../store.dart';
-import '../theme.dart';
+import 'common.dart';
 
 Future<String?> promptText(
   BuildContext context, {
@@ -127,20 +127,15 @@ Future<int?> pickColor(BuildContext context, int current) {
     builder: (context) => AlertDialog(
       title: const Text('Color'),
       content: Wrap(
-        spacing: 12,
-        runSpacing: 12,
+        spacing: 4,
+        runSpacing: 4,
         children: [
           for (final c in clientPalette)
-            InkWell(
-              customBorder: const CircleBorder(),
+            ColorChoice(
+              color: c,
+              selected: c == current,
+              radius: 20,
               onTap: () => Navigator.pop(context, c),
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: Color(c),
-                child: c == current
-                    ? Icon(Icons.check, color: checkColorOn(Color(c)))
-                    : null,
-              ),
             ),
         ],
       ),
