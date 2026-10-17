@@ -38,8 +38,6 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete').last); // confirm
-    await tester.pumpAndSettle();
 
     final bar = tester.getRect(find.byType(SnackBar));
     final fab = tester.getRect(find.byType(FloatingActionButton));

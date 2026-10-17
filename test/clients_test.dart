@@ -28,4 +28,32 @@ void main() {
     expect(acme.name, 'Acme Corp');
     expect(acme.color, clientPalette[1]);
   });
+
+  testWidgets('delete a client, then undo', (tester) async {
+    var t = DateTime(2026, 10, 14, 9);
+    final store = AppStore(storage: MemoryStorage(), clock: () => t);
+    final acme = store.addClient('Acme');
+    store.toggle(acme.id);
+    t = t.add(const Duration(hours: 1));
+    store.stop();
+    await tester.pumpWidget(
+      StoreScope(
+        store: store,
+        child: const MaterialApp(home: ClientsScreen()),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Options for Acme'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    expect(store.clients, isEmpty);
+    expect(find.text('Deleted Acme and 1 entry'), findsOneWidget);
+
+    await tester.tap(find.text('Undo'));
+    await tester.pump();
+    expect(store.clients.single.name, 'Acme');
+    expect(store.entries, hasLength(1));
+    await tester.pumpAndSettle(); // let the snackbar go
+  });
 }
