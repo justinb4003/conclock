@@ -325,162 +325,145 @@ class _TrackerScreenState extends State<TrackerScreen> {
     );
 
     return Scaffold(
-      // No app bar: the status card leads, with the list's tools under it.
-      body: SafeArea(
-        bottom: false,
-        child: clients.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('No clients yet'),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      onPressed: () => showAddClient(context),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add a client'),
-                    ),
-                  ],
-                ),
-              )
-            : Column(
+      appBar: AppBar(
+        title: const Text('Track'),
+        actions: [
+          if (clients.isNotEmpty)
+            IconButton(
+              tooltip: 'Quick switch',
+              onPressed: () => showQuickSwitch(context),
+              icon: const Icon(Icons.search),
+            ),
+          IconButton(
+            tooltip: 'Add client',
+            onPressed: () => showAddClient(context),
+            icon: const Icon(Icons.person_add_alt),
+          ),
+          if (withTasks.isNotEmpty)
+            IconButton(
+              tooltip: anyExpanded ? 'Hide all tasks' : 'Show all tasks',
+              onPressed: () => store.setCollapsed(withTasks, anyExpanded),
+              icon: Icon(anyExpanded ? Icons.unfold_less : Icons.unfold_more),
+            ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: clients.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _StatusPanel(
-                    running: running,
-                    client: running == null
-                        ? null
-                        : store.clientById(running.clientId),
-                    note: _note,
-                    noteFocus: _noteFocus,
-                    onStop: _stop,
-                    // Enter commits the note: it shows up as a running task.
-                    onNoteSubmitted: () => setState(_noteFocus.unfocus),
-                    taskOptions: _taskOptions,
-                    onTaskSelected: _taskSelected,
-                    onNewTask:
-                        running != null &&
-                            (running.note.trim().isNotEmpty ||
-                                (_editEntryId == running.id &&
-                                    _editFrom.isNotEmpty))
-                        ? _newTask
-                        : null,
-                    onNoteChanged: (v) {
-                      if (running != null) store.setNote(running, v);
-                    },
-                    todayTotal: (now) => store
-                        .totalsIn(today, addDays(today, 1), now)
-                        .values
-                        .fold(Duration.zero, (a, b) => a + b),
-                  ),
-                  // Hide/show all sits rightmost, above the clients' arrows.
-                  Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        IconButton(
-                          tooltip: 'Quick switch',
-                          onPressed: () => showQuickSwitch(context),
-                          icon: const Icon(Icons.search),
-                        ),
-                        IconButton(
-                          tooltip: 'Add client',
-                          onPressed: () => showAddClient(context),
-                          icon: const Icon(Icons.person_add_alt),
-                        ),
-                        if (withTasks.isNotEmpty)
-                          IconButton(
-                            tooltip: anyExpanded
-                                ? 'Hide all tasks'
-                                : 'Show all tasks',
-                            onPressed: () =>
-                                store.setCollapsed(withTasks, anyExpanded),
-                            icon: Icon(
-                              anyExpanded
-                                  ? Icons.unfold_less
-                                  : Icons.unfold_more,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    // A Column, not a ListView: rows keep their state when
-                    // reordered, so they can slide to their new place.
-                    child: SingleChildScrollView(
-                      controller: _scroll,
-                      padding: const EdgeInsets.only(bottom: 24),
-                      child: SlideStage(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (final c in clients)
-                              SlideOnMove(
-                                key: ValueKey('client ${c.id}'),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    _row(
-                                      store,
-                                      c,
-                                      null,
-                                      running?.clientId == c.id,
-                                      today,
-                                      now,
-                                      totals[c.id],
-                                      expanded: withTasks.contains(c.id)
-                                          ? !store.collapsedClients.contains(
-                                              c.id,
-                                            )
-                                          : null,
-                                    ),
-                                    for (final task in _visibleTasks(
-                                      c.id,
-                                      tasks[c.id] ?? const [],
-                                      running?.clientId == c.id
-                                          ? runningTask
-                                          : null,
-                                      collapsed: store.collapsedClients
-                                          .contains(c.id),
-                                    ))
-                                      SlideOnMove(
-                                        key: ValueKey('task ${c.id}/$task'),
-                                        child: _row(
-                                          store,
-                                          c,
-                                          task,
-                                          running?.clientId == c.id &&
-                                              runningTask == task,
-                                          today,
-                                          now,
-                                          null,
-                                        ),
-                                      ),
-                                    if ((tasks[c.id]?.length ?? 0) > _taskCap &&
-                                        !store.collapsedClients.contains(c.id))
-                                      _MoreTasks(
-                                        showingAll: _showAllTasks.contains(
-                                          c.id,
-                                        ),
-                                        hidden: tasks[c.id]!.length - _taskCap,
-                                        onTap: () => setState(() {
-                                          if (!_showAllTasks.remove(c.id)) {
-                                            _showAllTasks.add(c.id);
-                                          }
-                                        }),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
+                  const Text('No clients yet'),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: () => showAddClient(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add a client'),
                   ),
                 ],
               ),
-      ),
+            )
+          : Column(
+              children: [
+                _StatusPanel(
+                  running: running,
+                  client: running == null
+                      ? null
+                      : store.clientById(running.clientId),
+                  note: _note,
+                  noteFocus: _noteFocus,
+                  onStop: _stop,
+                  // Enter commits the note: it shows up as a running task.
+                  onNoteSubmitted: () => setState(_noteFocus.unfocus),
+                  taskOptions: _taskOptions,
+                  onTaskSelected: _taskSelected,
+                  onNewTask:
+                      running != null &&
+                          (running.note.trim().isNotEmpty ||
+                              (_editEntryId == running.id &&
+                                  _editFrom.isNotEmpty))
+                      ? _newTask
+                      : null,
+                  onNoteChanged: (v) {
+                    if (running != null) store.setNote(running, v);
+                  },
+                  todayTotal: (now) => store
+                      .totalsIn(today, addDays(today, 1), now)
+                      .values
+                      .fold(Duration.zero, (a, b) => a + b),
+                ),
+                Expanded(
+                  // A Column, not a ListView: rows keep their state when
+                  // reordered, so they can slide to their new place.
+                  child: SingleChildScrollView(
+                    controller: _scroll,
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: SlideStage(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final c in clients)
+                            SlideOnMove(
+                              key: ValueKey('client ${c.id}'),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _row(
+                                    store,
+                                    c,
+                                    null,
+                                    running?.clientId == c.id,
+                                    today,
+                                    now,
+                                    totals[c.id],
+                                    expanded: withTasks.contains(c.id)
+                                        ? !store.collapsedClients.contains(c.id)
+                                        : null,
+                                  ),
+                                  for (final task in _visibleTasks(
+                                    c.id,
+                                    tasks[c.id] ?? const [],
+                                    running?.clientId == c.id
+                                        ? runningTask
+                                        : null,
+                                    collapsed: store.collapsedClients.contains(
+                                      c.id,
+                                    ),
+                                  ))
+                                    SlideOnMove(
+                                      key: ValueKey('task ${c.id}/$task'),
+                                      child: _row(
+                                        store,
+                                        c,
+                                        task,
+                                        running?.clientId == c.id &&
+                                            runningTask == task,
+                                        today,
+                                        now,
+                                        null,
+                                      ),
+                                    ),
+                                  if ((tasks[c.id]?.length ?? 0) > _taskCap &&
+                                      !store.collapsedClients.contains(c.id))
+                                    _MoreTasks(
+                                      showingAll: _showAllTasks.contains(c.id),
+                                      hidden: tasks[c.id]!.length - _taskCap,
+                                      onTap: () => setState(() {
+                                        if (!_showAllTasks.remove(c.id)) {
+                                          _showAllTasks.add(c.id);
+                                        }
+                                      }),
+                                    ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
