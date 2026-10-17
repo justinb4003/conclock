@@ -121,26 +121,88 @@ Future<bool> confirm(
   return ok ?? false;
 }
 
-Future<int?> pickColor(BuildContext context, int current) {
-  return showDialog<int>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Color'),
-      content: Wrap(
-        spacing: 4,
-        runSpacing: 4,
-        children: [
-          for (final c in clientPalette)
-            ColorChoice(
-              color: c,
-              selected: c == current,
-              radius: 20,
-              onTap: () => Navigator.pop(context, c),
-            ),
-        ],
+/// Name and color of [client], in one dialog.
+Future<void> showEditClient(BuildContext context, Client client) =>
+    showDialog<void>(
+      context: context,
+      builder: (_) => StoreScope(
+        store: StoreScope.read(context),
+        child: _EditClientDialog(client: client),
       ),
-    ),
-  );
+    );
+
+class _EditClientDialog extends StatefulWidget {
+  const _EditClientDialog({required this.client});
+
+  final Client client;
+
+  @override
+  State<_EditClientDialog> createState() => _EditClientDialogState();
+}
+
+class _EditClientDialogState extends State<_EditClientDialog> {
+  late final _name = TextEditingController(text: widget.client.name);
+  late int _color = widget.client.color;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final name = _name.text.trim();
+    if (name.isEmpty) return;
+    final store = StoreScope.read(context);
+    if (name != widget.client.name) store.renameClient(widget.client, name);
+    if (_color != widget.client.color) {
+      store.setClientColor(widget.client, _color);
+    }
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit client'),
+      content: SizedBox(
+        width: 360,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _name,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Name'),
+              textCapitalization: TextCapitalization.words,
+              onSubmitted: (_) => _save(),
+            ),
+            const SizedBox(height: 16),
+            Text('Color', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 4),
+            Wrap(
+              children: [
+                for (final c in clientPalette)
+                  ColorChoice(
+                    color: c,
+                    selected: c == _color,
+                    onTap: () => setState(() => _color = c),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _save, child: const Text('Save')),
+      ],
+    );
+  }
 }
 
 /// Shows [message]; with [undo], adds an Undo button.
