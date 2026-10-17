@@ -258,6 +258,7 @@ class _TrackerScreenState extends State<TrackerScreen> {
       key: ValueKey(task == null ? c.id : '${c.id}/$task'),
       colors: clientScheme(context, c.color),
       label: task ?? c.name,
+      name: task == null ? c.name : '${c.name}, $task',
       isTask: task != null,
       running: isRunning,
       total: isRunning ? null : clientTotal ?? totalAt(now),
@@ -741,7 +742,7 @@ class _StatusPanel extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             IconButton.filledTonal(
-                              tooltip: 'Stop',
+                              tooltip: 'Stop ${client?.name ?? ''}'.trim(),
                               onPressed: onStop,
                               icon: const Icon(Icons.stop),
                             ),
@@ -804,6 +805,7 @@ class _TrackRow extends StatelessWidget {
     super.key,
     required this.colors,
     required this.label,
+    required this.name,
     required this.isTask,
     required this.running,
     required this.total,
@@ -816,6 +818,9 @@ class _TrackRow extends StatelessWidget {
   /// From the client's color.
   final ColorScheme colors;
   final String label;
+
+  /// What the buttons act on, for their tooltips: the client, and the task.
+  final String name;
   final bool isTask;
   final bool running;
   final Duration? total;
@@ -851,7 +856,7 @@ class _TrackRow extends StatelessWidget {
       contentPadding: EdgeInsets.only(left: isTask ? 52 : 10, right: 16),
       horizontalTitleGap: isTask ? 8 : 10,
       leading: IconButton(
-        tooltip: running ? 'Stop' : 'Start',
+        tooltip: running ? 'Stop $name' : 'Start $name',
         onPressed: onTap,
         visualDensity: isTask ? VisualDensity.compact : null,
         iconSize: isTask ? 16 : 24,
@@ -894,7 +899,9 @@ class _TrackRow extends StatelessWidget {
             child: onExpand == null
                 ? null
                 : IconButton(
-                    tooltip: expanded! ? 'Hide tasks' : 'Show tasks',
+                    tooltip: expanded!
+                        ? 'Hide $name tasks'
+                        : 'Show $name tasks',
                     onPressed: onExpand,
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,

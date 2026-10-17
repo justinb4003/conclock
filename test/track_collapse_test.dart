@@ -28,7 +28,7 @@ void main() {
     expect(find.text('Design'), findsOneWidget);
 
     // One client.
-    await tester.tap(find.byTooltip('Hide tasks').first);
+    await tester.tap(find.byTooltip('Hide Acme tasks'));
     await tester.pump();
     expect(find.text('Design'), findsNothing);
     expect(find.text('Review'), findsNothing);
@@ -53,7 +53,7 @@ void main() {
     expect(find.text('Migration'), findsOneWidget);
 
     await tester.pumpAndSettle(); // rows slide into place
-    await tester.tap(find.byTooltip('Hide tasks').last);
+    await tester.tap(find.byTooltip('Hide Globex tasks'));
     await store.flush();
     final reloaded = AppStore(storage: storage);
     await reloaded.load();

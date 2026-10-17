@@ -52,7 +52,7 @@ void main() {
     later();
 
     // Stopping an unnamed entry asks for a name; backing out keeps it running.
-    await tester.tap(find.byTooltip('Stop').first); // the status panel's
+    await tester.tap(find.byTooltip('Stop Globex').first); // the status panel's
     await tester.pumpAndSettle();
     expect(find.text('Name this task'), findsOneWidget);
     await tester.tapAt(const Offset(5, 5)); // dismiss
