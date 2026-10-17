@@ -177,8 +177,10 @@ void showToast(
         action: undo == null
             ? action
             : SnackBarAction(label: 'Undo', onPressed: undo),
-        // Give time to act on it.
+        // Give time to act on it. Flutter keeps snackbars with an action up
+        // until dismissed unless told otherwise.
         duration: Duration(seconds: action == null ? 4 : 12),
+        persist: false,
       ),
     );
 }

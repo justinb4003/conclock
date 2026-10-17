@@ -74,13 +74,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget get _page => switch (_index) {
-    0 => const TrackerScreen(),
-    1 => const LogScreen(),
-    2 => const TimesheetScreen(),
-    3 => const ClientsScreen(),
-    _ => const SettingsScreen(),
-  };
+  /// The current tab. Its own messenger shows toasts in the tab's Scaffold,
+  /// which floats them above that tab's + button; the outer one would cover
+  /// it. Not keyed by tab, so an Undo toast carries over when switching.
+  Widget get _page => ScaffoldMessenger(
+    child: switch (_index) {
+      0 => const TrackerScreen(),
+      1 => const LogScreen(),
+      2 => const TimesheetScreen(),
+      3 => const ClientsScreen(),
+      _ => const SettingsScreen(),
+    },
+  );
 
   void _select(int i) => setState(() => _index = i);
 

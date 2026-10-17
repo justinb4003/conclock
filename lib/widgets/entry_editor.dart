@@ -13,19 +13,23 @@ Future<void> showEntryEditor(BuildContext context, {Entry? entry}) {
     toast(context, 'Add a client first');
     return Future.value();
   }
+  // The dialog's own context reaches only the app-wide messenger; toasts
+  // belong to the screen that opened it.
+  final messenger = ScaffoldMessenger.of(context);
   return showDialog<void>(
     context: context,
     builder: (_) => StoreScope(
       store: store,
-      child: _EntryEditor(entry: entry),
+      child: _EntryEditor(entry: entry, messenger: messenger),
     ),
   );
 }
 
 class _EntryEditor extends StatefulWidget {
-  const _EntryEditor({this.entry});
+  const _EntryEditor({this.entry, required this.messenger});
 
   final Entry? entry;
+  final ScaffoldMessengerState messenger;
 
   @override
   State<_EntryEditor> createState() => _EntryEditorState();
@@ -192,10 +196,9 @@ class _EntryEditorState extends State<_EntryEditor> {
   }
 
   void _delete() {
-    final messenger = ScaffoldMessenger.of(context);
     final undo = StoreScope.read(context).deleteEntry(widget.entry!);
     Navigator.pop(context);
-    showToast(messenger, 'Entry deleted', undo: undo);
+    showToast(widget.messenger, 'Entry deleted', undo: undo);
   }
 
   @override
