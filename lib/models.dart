@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'uuid.dart';
 
 /// Colors offered for clients (ARGB).
 const clientPalette = <int>[
@@ -23,11 +23,8 @@ enum Rounding { off, task, day }
 /// How strongly the app color shows in the background (Settings).
 enum Backdrop { neutral, tinted, bold }
 
-final _rng = Random();
-
-String newId() =>
-    DateTime.now().microsecondsSinceEpoch.toRadixString(36) +
-    _rng.nextInt(1 << 30).toRadixString(36);
+/// A new id for a client or entry: a UUIDv7, so ids sort by creation.
+String newId() => newUuid();
 
 class Client {
   Client({

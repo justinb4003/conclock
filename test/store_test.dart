@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:conclock/models.dart';
 import 'package:conclock/storage/storage.dart';
 import 'package:conclock/store.dart';
+import 'package:conclock/uuid.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class MemoryStorage extends DataStorage {
@@ -100,7 +101,47 @@ void main() {
     expect(reloaded.running?.start, DateTime(2026, 10, 12, 9));
     expect(reloaded.decimalHours, isTrue);
     expect(reloaded.rounding, Rounding.day);
-    expect(jsonDecode(storage.data!)['version'], 1);
+    expect(jsonDecode(storage.data!)['version'], 2);
+  });
+
+  test('ids from before UUIDs convert on load, references too', () async {
+    storage.data = jsonEncode({
+      'version': 1,
+      'settings': {
+        'collapsedClients': ['hna4hb9tal6mrfkf'],
+      },
+      'clients': [
+        {'id': 'hna4hb9tal6mrfkf', 'name': 'Acme', 'color': 0xFF1E88E5},
+      ],
+      'entries': [
+        {
+          'id': 'hna4hdmr7tmdzpi',
+          'clientId': 'hna4hb9tal6mrfkf',
+          'start': '2026-10-12T09:00:00.000',
+          'end': '2026-10-12T10:00:00.000',
+          'note': 'Work',
+        },
+      ],
+    });
+    final before = storage.data;
+    await store.load();
+    final acme = store.clients.single;
+    expect(acme.id, toUuid('hna4hb9tal6mrfkf'));
+    expect(store.entries.single.id, toUuid('hna4hdmr7tmdzpi'));
+    expect(store.entries.single.clientId, acme.id);
+    expect(store.collapsedClients, {acme.id});
+    expect(storage.copies['pre-uuid'], before);
+
+    // Saved converted; loading that changes nothing more.
+    await store.flush();
+    final saved = jsonDecode(storage.data!) as Map<String, dynamic>;
+    expect(saved['version'], 2);
+    expect((saved['clients'] as List).single['id'], acme.id);
+    storage.copies.clear();
+    final again = AppStore(storage: storage);
+    await again.load();
+    expect(again.clients.single.id, acme.id);
+    expect(storage.copies, isEmpty);
   });
 
   test('recent tasks: distinct notes, newest first, 28-day window', () {

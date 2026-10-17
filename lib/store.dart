@@ -6,6 +6,7 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter/widgets.dart';
 
 import 'models.dart';
+import 'uuid.dart';
 import 'theme.dart';
 import 'storage/storage.dart';
 
@@ -96,7 +97,7 @@ class AppStore extends ChangeNotifier {
       await _storage.relocate(dir);
       try {
         final raw = await _storage.read();
-        if (raw != null) _apply(raw);
+        if (raw != null && _apply(raw)) _changed(); // save converted ids
       } catch (_) {
         await _storage.relocate(previous); // unreadable: stay where we were
         rethrow;
@@ -125,7 +126,15 @@ class AppStore extends ChangeNotifier {
   Future<void> load() async {
     try {
       final raw = await _storage.read();
-      if (raw != null && raw.trim().isNotEmpty) _apply(raw);
+      if (raw != null && raw.trim().isNotEmpty && _apply(raw)) {
+        // Ids converted to UUIDs: keep the file as it was, then save.
+        try {
+          await _storage.keepCopy('pre-uuid', raw);
+        } catch (e) {
+          debugPrint('ConClock: could not keep pre-uuid copy: $e');
+        }
+        _changed();
+      }
     } catch (e) {
       clients.clear();
       entries.clear();
@@ -141,10 +150,11 @@ class AppStore extends ChangeNotifier {
     _storage.watch((raw) {
       try {
         final unsaved = _dirty ? exportJson() : null;
-        _apply(raw);
+        final converted = _apply(raw); // e.g. saved by an older version
         _dirty = false;
         _saveTimer?.cancel();
         _saveTimer = null;
+        if (converted) _changed();
         if (unsaved != null) {
           setAside = unsaved;
           // Edits made here moments ago lose to the other writer; keep them
@@ -164,24 +174,36 @@ class AppStore extends ChangeNotifier {
   }
 
   /// Replaces all state with [raw]. Parses everything first, so on a bad
-  /// document it throws and leaves the current state untouched.
-  void _apply(String raw) {
+  /// document it throws and leaves the current state untouched. Ids from
+  /// before UUIDs are converted (see [toUuid]); returns whether any were.
+  bool _apply(String raw) {
     final data = jsonDecode(raw);
     if (data is! Map<String, dynamic> || data['clients'] is! List) {
       throw const FormatException('Not a ConClock data file');
     }
+    var converted = false;
+    String id(Object? v) {
+      final from = v as String;
+      final to = toUuid(from);
+      if (to != from) converted = true;
+      return to;
+    }
+
     final newClients = [
       for (final c in data['clients'] as List)
-        Client.fromJson(c as Map<String, dynamic>),
+        Client.fromJson({...c as Map<String, dynamic>, 'id': id(c['id'])}),
     ];
     final newEntries = [
       for (final e in data['entries'] as List? ?? const [])
-        Entry.fromJson(e as Map<String, dynamic>),
+        Entry.fromJson({
+          ...e as Map<String, dynamic>,
+          'id': id(e['id']),
+          'clientId': id(e['clientId']),
+        }),
     ];
     final settings = data['settings'] as Map<String, dynamic>? ?? const {};
     final collapsed = [
-      for (final id in settings['collapsedClients'] as List? ?? const [])
-        id as String,
+      for (final c in settings['collapsedClients'] as List? ?? const []) id(c),
     ];
     clients
       ..clear()
@@ -203,6 +225,7 @@ class AppStore extends ChangeNotifier {
     collapsedClients
       ..clear()
       ..addAll(collapsed);
+    return converted;
   }
 
   // ------------------------------------------------------------- backups
@@ -225,7 +248,8 @@ class AppStore extends ChangeNotifier {
   }
 
   Map<String, dynamic> toJson() => {
-    'version': 1,
+    // 2: ids are UUIDv7s.
+    'version': 2,
     'settings': {
       'decimalHours': decimalHours,
       'rounding': rounding.name,
