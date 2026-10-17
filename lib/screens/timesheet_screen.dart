@@ -382,6 +382,7 @@ class _Grid extends StatelessWidget {
           TextStyle? style,
           Color? bg,
           InlineSpan? tip,
+          required String where,
         }) {
           final c = Container(
             width: width,
@@ -391,20 +392,22 @@ class _Grid extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Text(text, style: style),
           );
-          if (tip == null || text.isEmpty) return c;
-          return Tooltip(
-            richMessage: tip,
-            textStyle: tipStyle,
-            triggerMode: TooltipTriggerMode.tap,
-            waitDuration: const Duration(milliseconds: 250),
-            showDuration: const Duration(seconds: 6),
-            child: c,
-          );
+          if (text.isEmpty) return c;
+          if (tip == null) {
+            return Semantics(
+              container: true,
+              label: '$where, $text',
+              excludeSemantics: true,
+              child: c,
+            );
+          }
+          return _TipCell(tip: tip, tipStyle: tipStyle, value: text, child: c);
         }
 
         /// One grid row: label, Mon–Sun cells, week total.
         Widget cells({
           required Widget label,
+          required String name,
           required double height,
           required List<Duration> days,
           required Duration total,
@@ -422,12 +425,14 @@ class _Grid extends StatelessWidget {
                 style: style,
                 bg: colBg(i),
                 tip: tip?.call(i),
+                where: '$name, ${_dayName(context, i)}',
               ),
             cell(
               _fmt(total),
               width: _totalW,
               height: height,
               style: totalStyle ?? style,
+              where: '$name, week total',
             ),
           ],
         );
@@ -498,6 +503,7 @@ class _Grid extends StatelessWidget {
                 ),
               ),
               child: cells(
+                name: c.name,
                 height: _rowH,
                 days: c.days,
                 total: c.total,
@@ -541,6 +547,7 @@ class _Grid extends StatelessWidget {
             if (expanded.contains(c.id))
               for (final t in c.tasks)
                 cells(
+                  name: '${c.name}, ${t.label}',
                   height: _taskRowH,
                   days: t.days,
                   total: t.total,
@@ -569,6 +576,7 @@ class _Grid extends StatelessWidget {
             border: Border(top: BorderSide(color: scheme.outline, width: 1.5)),
           ),
           child: cells(
+            name: 'Total',
             height: _rowH,
             days: sheet.dayTotals,
             total: sheet.total,
@@ -610,6 +618,58 @@ class _Grid extends StatelessWidget {
                 ),
               );
       },
+    );
+  }
+}
+
+/// A day cell with a breakdown: hovering shows it, and so does tapping or
+/// Enter (the cell takes focus). Screen readers get the value and the
+/// breakdown as one label.
+class _TipCell extends StatefulWidget {
+  const _TipCell({
+    required this.tip,
+    required this.tipStyle,
+    required this.value,
+    required this.child,
+  });
+
+  final InlineSpan tip;
+  final TextStyle? tipStyle;
+  final String value;
+  final Widget child;
+
+  @override
+  State<_TipCell> createState() => _TipCellState();
+}
+
+class _TipCellState extends State<_TipCell> {
+  final _tooltip = GlobalKey<TooltipState>();
+
+  void _show() => _tooltip.currentState?.ensureTooltipVisible();
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = widget.tip
+        .toPlainText()
+        .split('\n')
+        .map((l) => l.trim().replaceAll(RegExp(r'\s+'), ' '))
+        .join(', ');
+    return Semantics(
+      container: true,
+      label: '${widget.value}, $detail',
+      button: true,
+      onTap: _show,
+      excludeSemantics: true,
+      child: Tooltip(
+        key: _tooltip,
+        richMessage: widget.tip,
+        textStyle: widget.tipStyle,
+        triggerMode: TooltipTriggerMode.manual,
+        excludeFromSemantics: true,
+        waitDuration: const Duration(milliseconds: 250),
+        showDuration: const Duration(seconds: 6),
+        child: InkWell(onTap: _show, child: widget.child),
+      ),
     );
   }
 }
