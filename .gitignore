@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local-only files: test data seeding and data backups
+/tool/seed_test_data.py
+/conclock-backup-*.json
