@@ -637,11 +637,15 @@ class AppStore extends ChangeNotifier {
   }
 
   /// Puts deleted entries back (skipping any that reappeared meanwhile). A
-  /// restored running entry stops now if something else started since.
+  /// restored running entry that something else has replaced stops where
+  /// that started (or now, if it started first).
   void _restore(List<Entry> deleted) {
     for (final e in deleted) {
       if (entryById(e.id) != null) continue;
-      if (e.isRunning && running != null) e.end = now();
+      final next = running?.start;
+      if (e.isRunning && next != null) {
+        e.end = next.isAfter(e.start) ? next : now();
+      }
       entries.add(e);
     }
     _sort();

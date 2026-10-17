@@ -4,6 +4,7 @@ import '../format.dart';
 import '../models.dart';
 import '../store.dart';
 import 'common.dart';
+import 'dialogs.dart';
 
 enum StopChoice { named, unnamed, discard }
 
@@ -24,7 +25,8 @@ Future<StopChoice?> askTaskName(BuildContext context, Entry entry) async {
     case StopChoice.named:
       store.setNote(entry, name);
     case StopChoice.discard:
-      store.deleteEntry(entry);
+      final undo = store.deleteEntry(entry);
+      if (context.mounted) toast(context, 'Entry discarded', undo: undo);
     case StopChoice.unnamed:
       break;
   }

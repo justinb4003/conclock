@@ -78,6 +78,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(store.running?.clientId, store.clients.last.id);
     expect(store.entries.length, 3);
+    // Undo brings it back, ended where the switch started the next one.
+    await tester.tap(find.text('Undo'));
+    await tester.pump();
+    expect(store.entries.length, 4);
+    expect(store.entries[1].end, store.running!.start);
+    store.deleteEntry(store.entries[1]);
+    await tester.pump();
 
     for (final tab in ['Log', 'Timesheet', 'Clients', 'Track']) {
       await tester.tap(find.text(tab).last);
