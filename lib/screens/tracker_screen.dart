@@ -572,13 +572,6 @@ class _TaskFieldState extends State<_TaskField> {
                 tooltip: 'New task',
                 onPressed: widget.onNewTask,
                 icon: const Icon(Icons.add_task, size: 18),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-              ),
-              prefixIconConstraints: const BoxConstraints(
-                minWidth: 32,
-                minHeight: 0,
               ),
             ),
           ),
@@ -832,7 +825,7 @@ class _TrackRow extends StatelessWidget {
   final VoidCallback? onExpand;
 
   /// Room for the expand button, kept on every row so totals line up.
-  static const _expandW = 36.0;
+  static const _expandW = 48.0;
 
   @override
   Widget build(BuildContext context) {
@@ -843,12 +836,11 @@ class _TrackRow extends StatelessWidget {
     );
 
     // Only the play/stop button starts and stops, not the whole row. Its
-    // touch target is the usual 48px (40 on tasks) around the circle; the
-    // padding and gaps keep the circles and labels where they were.
+    // touch target is the usual 48px around the circle (less on compact
+    // desktop density); the padding and gaps keep circles and labels aligned.
     final size = isTask ? 24.0 : 36.0;
     return ListTile(
       dense: isTask,
-      visualDensity: isTask ? VisualDensity.compact : null,
       selected: running,
       selectedTileColor: colors.primary.withValues(alpha: isTask ? 0.08 : 0.12),
       selectedColor: theme.colorScheme.onSurface,
@@ -858,7 +850,6 @@ class _TrackRow extends StatelessWidget {
       leading: IconButton(
         tooltip: running ? 'Stop $name' : 'Start $name',
         onPressed: onTap,
-        visualDensity: isTask ? VisualDensity.compact : null,
         iconSize: isTask ? 16 : 24,
         style: IconButton.styleFrom(
           backgroundColor: running
@@ -905,8 +896,6 @@ class _TrackRow extends StatelessWidget {
                           ? 'Hide $name tasks'
                           : 'Show $name tasks',
                       onPressed: onExpand,
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
                       icon: AnimatedRotation(
                         turns: expanded! ? 0.5 : 0,
                         duration: const Duration(milliseconds: 120),
@@ -943,7 +932,6 @@ class _MoreTasks extends StatelessWidget {
       padding: const EdgeInsets.only(left: 52),
       child: TextButton.icon(
         onPressed: onTap,
-        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
         icon: Icon(
           showingAll ? Icons.expand_less : Icons.expand_more,
           size: 18,

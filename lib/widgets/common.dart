@@ -19,7 +19,6 @@ class HoursFormatToggle extends StatelessWidget {
       ],
       selected: {store.decimalHours},
       showSelectedIcon: false,
-      style: const ButtonStyle(visualDensity: VisualDensity.compact),
       onSelectionChanged: (s) => store.setDecimalHours(s.first),
     );
   }

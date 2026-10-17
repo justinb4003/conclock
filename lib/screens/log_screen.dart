@@ -161,9 +161,6 @@ class _LogScreenState extends State<LogScreen> {
                   ],
                   selected: {_byClient},
                   showSelectedIcon: false,
-                  style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                  ),
                   onSelectionChanged: (s) =>
                       setState(() => _byClient = s.first),
                 ),
@@ -338,7 +335,6 @@ class _GroupHeader extends StatelessWidget {
             child: IconButton(
               tooltip: item.open ? 'Collapse $what' : 'Expand $what',
               onPressed: onToggle,
-              visualDensity: VisualDensity.compact,
               iconSize: 18,
               color: theme.colorScheme.onSurfaceVariant,
               icon: Icon(item.open ? Icons.unfold_less : Icons.unfold_more),

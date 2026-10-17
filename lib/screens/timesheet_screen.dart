@@ -13,8 +13,6 @@ const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const _dayW = 68.0;
 const _totalW = 76.0;
 const _minNameW = 150.0;
-const _rowH = 40.0;
-const _taskRowH = 34.0;
 
 /// Week grid: clients (expandable to tasks) down the side, Mon–Sun across the
 /// top, hours in the cells. Hover or tap a cell for that day's task notes.
@@ -146,9 +144,6 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                       ],
                       selected: {store.rounding},
                       showSelectedIcon: false,
-                      style: const ButtonStyle(
-                        visualDensity: VisualDensity.compact,
-                      ),
                       onSelectionChanged: (s) => store.setRounding(s.first),
                     ),
                   ],
@@ -358,6 +353,8 @@ class _Grid extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final todayCol = daysBetween(sheet.from, DateTime.now());
+    // Cells are targets: 48px on touch, less with desktop density.
+    final rowH = 48 + theme.visualDensity.vertical * 4;
     final numStyle = timeStyle(context, theme.textTheme.bodyMedium);
     final bold = numStyle.copyWith(fontWeight: FontWeight.w600);
     final muted = numStyle.copyWith(color: scheme.onSurfaceVariant);
@@ -504,7 +501,7 @@ class _Grid extends StatelessWidget {
               ),
               child: cells(
                 name: c.name,
-                height: _rowH,
+                height: rowH,
                 days: c.days,
                 total: c.total,
                 style: numStyle,
@@ -548,7 +545,7 @@ class _Grid extends StatelessWidget {
               for (final t in c.tasks)
                 cells(
                   name: '${c.name}, ${t.label}',
-                  height: _taskRowH,
+                  height: rowH,
                   days: t.days,
                   total: t.total,
                   style: muted,
@@ -577,7 +574,7 @@ class _Grid extends StatelessWidget {
           ),
           child: cells(
             name: 'Total',
-            height: _rowH,
+            height: rowH,
             days: sheet.dayTotals,
             total: sheet.total,
             style: bold,
