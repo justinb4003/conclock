@@ -8,11 +8,20 @@ import '../widgets/dialogs.dart';
 class ClientsScreen extends StatelessWidget {
   const ClientsScreen({super.key});
 
-  /// No confirmation: Undo puts the client and its entries back, as
-  /// everywhere else.
-  void _delete(BuildContext context, Client c) {
+  /// Asks first: a client takes its whole history with it. The toast
+  /// still offers Undo.
+  Future<void> _delete(BuildContext context, Client c) async {
     final store = StoreScope.read(context);
     final n = store.entryCount(c.id);
+    final ok = await confirm(
+      context,
+      title: 'Delete ${c.name}?',
+      message: n == 0
+          ? 'This client has no tracked time.'
+          : 'This also deletes $n time ${n == 1 ? 'entry' : 'entries'}. '
+                'Archive instead to keep the history.',
+    );
+    if (!ok || !context.mounted) return;
     toast(
       context,
       n == 0

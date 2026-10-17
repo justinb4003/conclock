@@ -29,7 +29,7 @@ void main() {
     expect(acme.color, clientPalette[1]);
   });
 
-  testWidgets('delete a client, then undo', (tester) async {
+  testWidgets('delete a client after confirming, then undo', (tester) async {
     var t = DateTime(2026, 10, 14, 9);
     final store = AppStore(storage: MemoryStorage(), clock: () => t);
     final acme = store.addClient('Acme');
@@ -46,6 +46,10 @@ void main() {
     await tester.tap(find.byTooltip('Options for Acme'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete Acme?'), findsOneWidget);
+    expect(store.clients, hasLength(1)); // not until confirmed
+    await tester.tap(find.text('Delete').last);
     await tester.pumpAndSettle();
     expect(store.clients, isEmpty);
     expect(find.text('Deleted Acme and 1 entry'), findsOneWidget);
