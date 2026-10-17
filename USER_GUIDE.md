@@ -83,16 +83,18 @@ history).
 
 ## Settings
 
-- **Display**: **Theme** (System / Light / Dark), **Color** (the app's accent),
-  **Background** (Neutral / Tinted / Bold use of that color), **Monospace
-  times**, and **Decimal hours** (1.50 instead of 1:30, everywhere).
-- **Desktop**: **Keep running in tray when closed**. When on, closing the
-  window leaves ConClock in the tray; the tray menu shows what's running and
-  can stop, start a client, reopen or quit.
+- **Display**: **Decimal hours** (1.50 instead of 1:30, everywhere),
+  **Monospace times**, and **Dyslexia-friendly font** (all text in
+  OpenDyslexic).
 - **Data**: **Data location** shows where the data lives; on desktop you can
   move it to another folder (a synced one, to share between computers).
   **Export backup** saves everything as one JSON file; **Import backup**
   replaces all data with one (the current data is kept as a copy first).
+- **Appearance**: **Color** (the app's accent), **Background** (Neutral /
+  Tinted / Bold use of that color) and **Theme** (System / Light / Dark).
+- **Desktop**: **Keep running in tray when closed**. When on, closing the
+  window leaves ConClock in the tray; the tray menu shows what's running and
+  can stop, start a client, reopen or quit.
 - **About**: the version and release date.
 
 ## How do I...
