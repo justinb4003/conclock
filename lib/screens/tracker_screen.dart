@@ -690,15 +690,18 @@ class _StatusPanel extends StatelessWidget {
             ),
             child: KeyedSubtree(
               key: ValueKey(r == null),
+              // Wraps rather than overflowing with large text.
               child: r == null
-                  ? Row(
+                  ? Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 4,
                       children: [
-                        Expanded(
-                          child: Text(
-                            'Not tracking — press ▶ on a client to start',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
+                        Text(
+                          'Not tracking — press ▶ on a client to start',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
                         Text.rich(
@@ -727,12 +730,18 @@ class _StatusPanel extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            LiveBuilder(
-                              builder: (context, now) => Text(
-                                fmtClock(r.durationAt(now)),
-                                style: timeStyle(
-                                  context,
-                                  theme.textTheme.headlineSmall,
+                            // Shrinks only if it can't fit (large text).
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: LiveBuilder(
+                                  builder: (context, now) => Text(
+                                    fmtClock(r.durationAt(now)),
+                                    style: timeStyle(
+                                      context,
+                                      theme.textTheme.headlineSmall,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -760,7 +769,9 @@ class _StatusPanel extends StatelessWidget {
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
-                            child: Row(
+                            child: Wrap(
+                              alignment: WrapAlignment.spaceBetween,
+                              spacing: 12,
                               children: [
                                 Text.rich(
                                   TextSpan(
@@ -773,7 +784,6 @@ class _StatusPanel extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                const Spacer(),
                                 Text.rich(
                                   TextSpan(
                                     children: [
