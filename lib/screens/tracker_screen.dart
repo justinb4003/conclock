@@ -672,7 +672,7 @@ class _StatusPanel extends StatelessWidget {
                       runSpacing: 4,
                       children: [
                         Text(
-                          'Not tracking — press ▶ on a client to start',
+                          'Not tracking — press play on a client to start',
                           style: theme.textTheme.bodyLarge?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
