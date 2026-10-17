@@ -93,22 +93,6 @@ class _EntryEditorState extends State<_EntryEditor> {
     _end = end;
   }
 
-  /// The end a day earlier, if that's still after the start.
-  bool get _canEndEarlier {
-    final e = _end;
-    return e != null &&
-        DateTime(
-          e.year,
-          e.month,
-          e.day - 1,
-          e.hour,
-          e.minute,
-          e.second,
-        ).isAfter(_start);
-  }
-
-  void _shiftEndDay(int by) => setState(() => _placeEnd(_endDays + by));
-
   Future<void> _pickDate() async {
     final d = await showDatePicker(
       context: context,
@@ -156,7 +140,7 @@ class _EntryEditorState extends State<_EntryEditor> {
       initialTime: TimeOfDay.fromDateTime(_end!),
     );
     if (t == null) return;
-    // The first such time after the start; the day buttons go further.
+    // The first such time after the start (the next day if need be).
     setState(() => _placeEnd(0, t));
   }
 
@@ -291,45 +275,17 @@ class _EntryEditorState extends State<_EntryEditor> {
                 ],
               ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          const TextSpan(text: 'Duration '),
-                          timeSpan(
-                            context,
-                            fmtHm(
-                              duration.isNegative ? Duration.zero : duration,
-                            ),
-                          ),
-                        ],
-                      ),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                  if (!_running) ...[
-                    Text(
-                      'Ends ${MaterialLocalizations.of(context).formatShortMonthDay(_end!)}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    IconButton(
-                      tooltip: 'End a day earlier',
-                      visualDensity: VisualDensity.compact,
-                      iconSize: 18,
-                      onPressed: _canEndEarlier ? () => _shiftEndDay(-1) : null,
-                      icon: const Icon(Icons.remove),
-                    ),
-                    IconButton(
-                      tooltip: 'End a day later',
-                      visualDensity: VisualDensity.compact,
-                      iconSize: 18,
-                      onPressed: () => _shiftEndDay(1),
-                      icon: const Icon(Icons.add),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    const TextSpan(text: 'Duration '),
+                    timeSpan(
+                      context,
+                      fmtHm(duration.isNegative ? Duration.zero : duration),
                     ),
                   ],
-                ],
+                ),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 12),
               TextField(

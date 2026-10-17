@@ -36,7 +36,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('end day can be moved back and forth', (tester) async {
+  testWidgets('picking the end time puts it after the start', (tester) async {
     final acme = store.addClient('Acme');
     // A timer left running overnight: 9:00 to 10:00 the next day.
     store.addEntry(
@@ -51,22 +51,13 @@ void main() {
     expect(find.textContaining('(+1d)'), findsOneWidget);
     expect(find.text('Duration 25:00'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('End a day earlier'));
-    await tester.pump();
+    // 10:00 again: the first 10:00 after the start is the same day.
+    await tester.tap(find.textContaining('(+1d)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('(+1d)'), findsNothing);
     expect(find.text('Duration 1:00'), findsOneWidget);
-    // 10:00 the day before would be before the start.
-    final earlier = tester.widget<IconButton>(
-      find.widgetWithIcon(IconButton, Icons.remove),
-    );
-    expect(earlier.onPressed, isNull);
-
-    await tester.tap(find.byTooltip('End a day later'));
-    await tester.tap(find.byTooltip('End a day later'));
-    await tester.pump();
-    expect(find.textContaining('(+2d)'), findsOneWidget);
-    await tester.tap(find.byTooltip('End a day earlier'));
-    await tester.tap(find.byTooltip('End a day earlier'));
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(store.entryById('e1')!.end, DateTime(2026, 10, 12, 10));
